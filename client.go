@@ -79,7 +79,6 @@ type Agent struct {
 	protocol  iface.IProtocol
 	ctx       context.Context
 	ctxCancel context.CancelFunc
-	tw        *src.TimingWheel
 	isStop    *src.AtomicInt64
 	wg        *sync.WaitGroup
 }
@@ -110,7 +109,6 @@ func (a *Agent) AddProtocol(protocol iface.IProtocol) {
 }
 func (a *Agent) Start() {
 	go a.con.Run()
-	go a.tw.Start()
 }
 func (a *Agent) IsStop() bool {
 	return a.isStop.Get() == 0
@@ -119,15 +117,8 @@ func (a *Agent) Stop() {
 	if a.IsStop() {
 		a.isStop.Store(1)
 		a.con.Close()
-		a.tw.Stop()
 		a.wg.Wait()
 	}
-}
-func (a *Agent) AddTimer(interval time.Duration, fn func()) int64 {
-	return a.tw.AddTimer(time.Now(), interval, fn)
-}
-func (a *Agent) TimerAt(when time.Time, fn func()) int64 {
-	return a.tw.AddTimer(when, 0, fn)
 }
 func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol) *Agent {
 	agent := &Agent{
@@ -138,7 +129,6 @@ func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol) *A
 	agent.AddProtocol(protocol)
 	agent.AddEvent(event)
 	agent.ctx, agent.ctxCancel = context.WithCancel(context.Background())
-	agent.tw = src.NewTimingWheel(agent.ctx)
 
 	agent.con = net2.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 
@@ -157,16 +147,17 @@ func main() {
 	}
 
 	agent := NewAgent(con, AgentEvent{}, src.Protocol{})
+	src.InitTimingWheel(agent.ctx)
 
 	//心跳单独实现.
-	agent.AddTimer(2*time.Second, func() {
+	src.AddTimer(2*time.Second, func() {
 		SendHeart(agent.con)
 	})
 	//目前定时汇报cpu,内存,硬盘使用情况
-	agent.AddTimer(3*time.Second, func() {
+	src.AddTimer(3*time.Second, func() {
 		SendCPU(agent.con)
 	})
-	agent.AddTimer(4*time.Second, func() {
+	src.AddTimer(4*time.Second, func() {
 		SendMem(agent.con)
 	})
 

@@ -14,8 +14,24 @@ const (
 	tickPeriod time.Duration = 500 * time.Millisecond
 )
 
-var timersId *AtomicInt64
+var (
+	timersId    *AtomicInt64
+	timingWheel *TimingWheel
+)
 
+func GetTimingWheel() *TimingWheel {
+	return timingWheel
+}
+func InitTimingWheel(ctx context.Context) {
+	timingWheel = NewTimingWheel(ctx)
+	go timingWheel.Start()
+}
+func AddTimer(interval time.Duration, fn func()) int64 {
+	return timingWheel.AddTimer(time.Now(), interval, fn)
+}
+func TimerAt(when time.Time, fn func()) int64 {
+	return timingWheel.AddTimer(when, 0, fn)
+}
 func init() {
 	timersId = NewAtomicInt64(0)
 }
@@ -190,7 +206,8 @@ func (wheel *TimingWheel) Start() {
 			timers := wheel.GetExpired()
 			for _, timerType := range timers {
 				//这里如果使用一个工作次,避免堵塞
-				//todo workerPool
+				//调度,如果使用workPool可能出现延迟执行的情况
+				//但是如果不使用,如果定时器过多,必然会导性能问题..
 				go timerType.timeout()
 			}
 			wheel.Update(timers)

@@ -8,35 +8,14 @@ import (
 	"time"
 )
 
-type Server struct {
-	*net.Server
-	tw *src.TimingWheel
-}
-
-func NewServer() *Server {
-	server := &Server{
-		Server: net.NewServer(),
-	}
-	server.tw = src.NewTimingWheel(server.GetContext())
-	return server
-}
-func (s *Server) Run() {
-	go s.tw.Start()
-	s.Server.Run()
-}
-func (s *Server) AddTimer(interval time.Duration, fn func()) int64 {
-	return s.tw.AddTimer(time.Now(), interval, fn)
-}
-func (s *Server) TimerAt(when time.Time, fn func()) int64 {
-	return s.tw.AddTimer(when, 0, fn)
-}
-
 func main() {
 	utils.GlobalConfig.Load("json", "./app.json")
-	server := NewServer()
+	server := net.NewServer()
+	src.InitTimingWheel(server.GetContext())
+
 	server.AddEvent(&src.Event{})
 	server.AddProtocol(&src.Protocol{})
-	server.AddTimer(2*time.Second, func() {
+	src.AddTimer(2*time.Second, func() {
 		conMap := server.GetConnections()
 		timeOut := utils.GlobalConfig.GetInt64("heartTimeOut")
 		now := time.Now()
