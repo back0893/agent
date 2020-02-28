@@ -13,6 +13,8 @@ const (
 	CPU          = 101 //cpu使用
 	HHD          = 102 //硬盘使用
 	MEM          = 103 //内存使用
+	LoadAvg      = 104 //负载
+	PortListen   = 105 //端口监听情况
 	Response     = 100 //通用回应
 )
 

@@ -1,7 +1,7 @@
 package funcs
 
 import (
-	"agent/src/common/model"
+	"agent/src/agent/model"
 	"github.com/toolkits/nux"
 )
 
@@ -12,22 +12,25 @@ df.bytes.total：磁盘总大小
 df.bytes.used：磁盘已用大小
 */
 
-func DiskUseMetrics() (map[string][]*model.MetricValue, error) {
+func DiskUseMetrics() ([]*model.Disk, error) {
 	mounts, err := nux.ListMountPoint()
 	if err != nil {
 		return nil, err
 	}
-	ms := make(map[string][]*model.MetricValue)
+	disks := make([]*model.Disk, 0)
 	for _, mount := range mounts {
 		deviceUsage, err := nux.BuildDeviceUsage(mount[0], mount[1], mount[2])
 		if err != nil {
 			return nil, err
 		}
-		mvs := make([]*model.MetricValue, 0)
-		mvs = append(mvs, model.NewMetricValue("df.bytes.total", deviceUsage.BlocksAll))
-		mvs = append(mvs, model.NewMetricValue("df.bytes.free", deviceUsage.BlocksFree))
-		mvs = append(mvs, model.NewMetricValue("df.bytes.used", deviceUsage.BlocksUsed))
-		ms[deviceUsage.FsFile] = mvs
+		disk := &model.Disk{
+			FsFile: deviceUsage.FsFile,
+			Free:   deviceUsage.BlocksFree,
+			Total:  deviceUsage.BlocksAll,
+			Used:   deviceUsage.BlocksUsed,
+		}
+		disks = append(disks, disk)
 	}
-	return ms, nil
+
+	return disks, nil
 }

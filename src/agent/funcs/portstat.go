@@ -1,7 +1,7 @@
 package funcs
 
 import (
-	"agent/src/common/model"
+	"agent/src/agent/model"
 	"errors"
 	"github.com/toolkits/nux"
 	"github.com/toolkits/slice"
@@ -11,7 +11,7 @@ import (
 net.port.listen 端口监听状态
 */
 
-func ListenTcpPortMetrics(ports ...int64) ([]*model.MetricValue, error) {
+func ListenTcpPortMetrics(ports ...int64) ([]*model.Port, error) {
 	if len(ports) == 0 {
 		return nil, errors.New("port empty")
 	}
@@ -19,11 +19,11 @@ func ListenTcpPortMetrics(ports ...int64) ([]*model.MetricValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	mvs := listenPort("net.tcp.port", ports, ps)
+	mvs := listenPort("tcp", ports, ps)
 	return mvs, nil
 }
 
-func ListenUdpPortMetrics(ports ...int64) ([]*model.MetricValue, error) {
+func ListenUdpPortMetrics(ports ...int64) ([]*model.Port, error) {
 	if len(ports) == 0 {
 		return nil, errors.New("port empty")
 	}
@@ -31,15 +31,18 @@ func ListenUdpPortMetrics(ports ...int64) ([]*model.MetricValue, error) {
 	if err != nil {
 		return nil, err
 	}
-	mvs := listenPort("net.udp.port", ports, ps)
+	mvs := listenPort("udp", ports, ps)
 	return mvs, nil
 }
 
-func listenPort(metric string, ports []int64, listenPorts []int64) []*model.MetricValue {
-	mvs := make([]*model.MetricValue, 0, 10)
+func listenPort(metric string, ports []int64, listenPorts []int64) []*model.Port {
+	mvs := make([]*model.Port, 0, 10)
 	for _, port := range ports {
 		if slice.ContainsInt64(listenPorts, port) {
-			mvs = append(mvs, model.NewMetricValue(metric, port))
+			mvs = append(mvs, &model.Port{
+				Type: metric,
+				Port: port,
+			})
 		}
 	}
 	return mvs

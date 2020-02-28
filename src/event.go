@@ -1,9 +1,10 @@
 package src
 
 import (
+	"agent/src/agent/model"
 	"bytes"
 	"context"
-	"encoding/binary"
+	"encoding/gob"
 	"github.com/back0893/goTcp/iface"
 	"log"
 	"time"
@@ -18,38 +19,57 @@ func (Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 
 func (Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*Packet)
+	r := bytes.NewReader(pkt.Data)
+	decoder := gob.NewDecoder(r)
 	switch pkt.Id {
 	case PING:
 		connection.SetExtraData("heart", time.Now().Unix())
 		log.Println("心跳")
 	case CPU:
-		var cpuUsage int32
-		r := bytes.NewReader(pkt.Data)
-		if err := binary.Read(r, binary.BigEndian, &cpuUsage); err != nil {
-			log.Println("cpu使用读取失败")
-		} else {
-			log.Printf("cpu个数%d\n", cpuUsage)
+		var cpu model.Cpu
+		if err := decoder.Decode(&cpu); err != nil {
+			log.Println("读取cpu信息失败")
+			break
 		}
+		log.Printf("cpu目前闲置%.2f,负载%.2f\n", cpu.Busy, cpu.Idle)
 	case HHD:
-		diskname := bytes.Split(pkt.Data, []byte("\n"))
-		for _, name := range diskname {
-			log.Printf("硬盘名称%s\n", string(name))
+		disks := make([]*model.Disk, 0)
+		if err := decoder.Decode(&disks); err != nil {
+			log.Println("读取硬盘信息失败")
+			break
+		}
+		for _, disk := range disks {
+			total := float64(disk.Total) / (1024 * 1024)
+			used := float64(disk.Used) / (1024 * 1024)
+			free := float64(disk.Free) / (1024 * 1024)
+			log.Printf("硬盘名称%s\n,总大小%.2fMB,已经使用%.2fMB,剩余%.2fMB\n", disk.FsFile, total, used, free)
 		}
 	case MEM:
-		var memTotal int64
-		var memUsed int64
-		r := bytes.NewReader(pkt.Data)
-		if err := binary.Read(r, binary.BigEndian, &memTotal); err != nil {
-			log.Println("读取失败")
-			return
+		var mem model.Memory
+		if err := decoder.Decode(&mem); err != nil {
+			log.Println("读取内存信息失败")
+			break
 		}
-		if err := binary.Read(r, binary.BigEndian, &memUsed); err != nil {
-			log.Println("读取失败")
-			return
+		log.Printf("内存大小%.2fMB,已经使用%.2fMB\n", float64(mem.Total)/(1024*1024), float64(mem.Used)/(1024*1024))
+	case LoadAvg:
+		loadAvgs := make([]*model.LoadAvg, 0)
+		if err := decoder.Decode(&loadAvgs); err != nil {
+			log.Println("读取负载信息失败")
+			break
 		}
-		log.Printf("内存大小%fGb,已经使用%fGb", float64(memTotal)/(1024*1024), float64(memUsed)/(1024*1024))
+		for _, loadAvg := range loadAvgs {
+			log.Printf("负载情况为%s=>%.2f\n", loadAvg.Name, loadAvg.Load)
+		}
+	case PortListen:
+		ports := make([]*model.Port, 0)
+		if err := decoder.Decode(&ports); err != nil {
+			log.Println("读取监听端口信息失败")
+			break
+		}
+		for _, port := range ports {
+			log.Printf("监听端口协议为%s,端口号%d\n", port.Type, port.Port)
+		}
 	}
-
 	packet = ComResponse()
 	connection.Write(packet)
 }

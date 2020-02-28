@@ -9,25 +9,23 @@ func TestCpu(t *testing.T) {
 	funcs.UpdateCpuStat()
 	funcs.UpdateCpuStat()
 	ms := funcs.CpuMetrics()
-	for _, m := range ms {
-		t.Log(m.Value)
-	}
+	t.Logf("idel=>%.2f,busy=>%.2f", ms.Idle, ms.Busy)
 }
 func TestDisk(t *testing.T) {
 	disk, _ := funcs.DiskUseMetrics()
-	for fsFile, ms := range disk {
-		t.Logf("%s has %d free %d,use %d", fsFile, ms[0].Value, ms[1].Value, ms[2].Value)
+	for _, ms := range disk {
+		t.Logf("%s has %d free %d,use %d", ms.FsFile, ms.Total, ms.Free, ms.Used)
 	}
 }
 func TestMem(t *testing.T) {
 	mem, _ := funcs.MemMetrics()
-	t.Logf(" total %d,use %d", mem[0].Value, mem[1].Value)
+	t.Logf(" total %d,use %d", mem.Total, mem.Used)
 }
 
 func TestLoadAvg(t *testing.T) {
 	avg, _ := funcs.LoadAvgMetrics()
 	for _, a := range avg {
-		t.Log(a.Value)
+		t.Log(a.Load)
 	}
 }
 func TestPort(t *testing.T) {
@@ -36,6 +34,6 @@ func TestPort(t *testing.T) {
 		t.Error(err)
 	}
 	for _, a := range avg {
-		t.Log(a.Value)
+		t.Log(a.Port)
 	}
 }

@@ -2,23 +2,30 @@ package main
 
 import (
 	"agent/src"
+	"agent/src/agent/funcs"
 	"bytes"
 	"context"
-	"encoding/binary"
+	"encoding/gob"
 	"github.com/back0893/goTcp/iface"
 	net2 "github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
-	"github.com/toolkits/nux"
 	"log"
 	"net"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
 )
 
+func EncodeData(e interface{}) ([]byte, error) {
+	buffer := bytes.NewBuffer([]byte{})
+	encoder := gob.NewEncoder(buffer)
+	if err := encoder.Encode(e); err != nil {
+		return nil, err
+	}
+	return buffer.Bytes(), nil
+}
 func SendHeart(conn iface.IConnection) {
 	pkt := src.NewPkt()
 	pkt.Id = src.PING
@@ -29,10 +36,14 @@ func SendHeart(conn iface.IConnection) {
 func SendCPU(conn iface.IConnection) {
 	pkt := src.NewPkt()
 	pkt.Id = src.CPU
-	buffer := bytes.NewBuffer([]byte{})
-	num := nux.NumCpu()
-	binary.Write(buffer, binary.BigEndian, int32(num))
-	pkt.Data = buffer.Bytes()
+	cpu := funcs.CpuMetrics()
+
+	data, err := EncodeData(cpu)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	pkt.Data = data
 	if err := conn.Write(pkt); err != nil {
 		log.Println(err)
 	}
@@ -40,18 +51,20 @@ func SendCPU(conn iface.IConnection) {
 func SendHHD(conn iface.IConnection) {
 	pkt := src.NewPkt()
 	pkt.Id = src.HHD
-	buffer := bytes.NewBuffer([]byte{})
-	disks, err := nux.ListDiskStats()
+
+	disks, err := funcs.DiskUseMetrics()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	pkt.Data, err = EncodeData(disks)
+
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	diskName := make([]string, 0)
-	for _, disk := range disks {
-		diskName = append(diskName, disk.Device)
-	}
-	str := strings.Join(diskName, "\n")
-	buffer.WriteString(str)
+
 	if err := conn.Write(pkt); err != nil {
 		log.Println(err)
 	}
@@ -59,15 +72,50 @@ func SendHHD(conn iface.IConnection) {
 func SendMem(conn iface.IConnection) {
 	pkt := src.NewPkt()
 	pkt.Id = src.MEM
-	buffer := bytes.NewBuffer([]byte{})
-	info, err := nux.MemInfo()
+	memory, err := funcs.MemMetrics()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	binary.Write(buffer, binary.BigEndian, info.MemTotal)
-	binary.Write(buffer, binary.BigEndian, info.MemTotal-info.MemFree)
-	pkt.Data = buffer.Bytes()
+	pkt.Data, err = EncodeData(memory)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if err := conn.Write(pkt); err != nil {
+		log.Println(err)
+	}
+}
+func SendLoadAvg(conn iface.IConnection) {
+	pkt := src.NewPkt()
+	pkt.Id = src.LoadAvg
+	loadAvg, err := funcs.LoadAvgMetrics()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	pkt.Data, err = EncodeData(loadAvg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if err := conn.Write(pkt); err != nil {
+		log.Println(err)
+	}
+}
+func SendPort(conn iface.IConnection) {
+	pkt := src.NewPkt()
+	pkt.Id = src.PortListen
+	loadAvg, err := funcs.ListenTcpPortMetrics(80, 10086)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	pkt.Data, err = EncodeData(loadAvg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	if err := conn.Write(pkt); err != nil {
 		log.Println(err)
 	}
@@ -95,7 +143,7 @@ func (a AgentEvent) OnMessage(ctx context.Context, packet iface.IPacket, connect
 }
 
 func (a AgentEvent) OnClose(ctx context.Context, connection iface.IConnection) {
-	log.Println("接连成功关闭")
+	log.Println("接连关闭")
 }
 
 func (a *Agent) AddEvent(event iface.IEvent) {
@@ -111,11 +159,11 @@ func (a *Agent) Start() {
 	go a.con.Run()
 }
 func (a *Agent) IsStop() bool {
-	return a.isStop.Get() == 0
+	return a.isStop.Get() == 1
 }
 func (a *Agent) Stop() {
 	if a.IsStop() {
-		a.isStop.Store(1)
+		a.isStop.Store(0)
 		a.con.Close()
 		a.wg.Wait()
 	}
@@ -156,10 +204,12 @@ func main() {
 	//目前定时汇报cpu,内存,硬盘使用情况
 	src.AddTimer(3*time.Second, func() {
 		SendCPU(agent.con)
-	})
-	src.AddTimer(4*time.Second, func() {
 		SendMem(agent.con)
+		SendHHD(agent.con)
+		SendLoadAvg(agent.con)
 	})
+
+	//todo agent的断线重连
 
 	go agent.Start()
 

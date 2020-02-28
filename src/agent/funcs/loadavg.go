@@ -1,7 +1,7 @@
 package funcs
 
 import (
-	"agent/src/common/model"
+	"agent/src/agent/model"
 	"github.com/toolkits/nux"
 )
 
@@ -10,14 +10,23 @@ import (
 1,5,15Min内负载
 */
 
-func LoadAvgMetrics() ([]*model.MetricValue, error) {
+func LoadAvgMetrics() ([]*model.LoadAvg, error) {
 	load, err := nux.LoadAvg()
 	if err != nil {
 		return nil, err
 	}
-	return []*model.MetricValue{
-		model.NewMetricValue("load.1min", load.Avg1min),
-		model.NewMetricValue("load.5min", load.Avg5min),
-		model.NewMetricValue("load.15min", load.Avg15min),
+	return []*model.LoadAvg{
+		{
+			Name: "1min",
+			Load: load.Avg1min,
+		},
+		{
+			Name: "5min",
+			Load: load.Avg5min,
+		},
+		{
+			Name: "15min",
+			Load: load.Avg15min,
+		},
 	}, nil
 }
