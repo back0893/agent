@@ -37,5 +37,12 @@ func main() {
 			return true
 		})
 	})
-	server.Listen()
+
+	//主动连接到一个任务发送系统,等待任务下达
+	//任务下达完成后将通知任务系统任务结果
+	//TODO task_client
+
+	ip := utils.GlobalConfig.GetString("Ip")
+	port := utils.GlobalConfig.GetInt("Port")
+	server.Listen(ip, port)
 }
