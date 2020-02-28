@@ -5,7 +5,6 @@ import (
 	"errors"
 	"github.com/toolkits/nux"
 	"github.com/toolkits/slice"
-	"log"
 )
 
 /**
