@@ -3,6 +3,7 @@ package main
 import (
 	"agent/src"
 	"agent/src/agent/funcs"
+	"agent/src/agent/model"
 	"bytes"
 	"context"
 	"encoding/gob"
@@ -16,6 +17,10 @@ import (
 	"sync"
 	"syscall"
 	"time"
+)
+
+const (
+	AGENT string = "agent"
 )
 
 func EncodeData(e interface{}) ([]byte, error) {
@@ -134,6 +139,17 @@ type Agent struct {
 type AgentEvent struct{}
 
 func (a AgentEvent) OnConnect(ctx context.Context, connection iface.IConnection) {
+	//这个时候发送身份识别
+	pkt := src.NewPkt()
+	pkt.Id = src.Auth
+	authModel := model.Auth{
+		Username: "client1",
+		Password: "123456",
+	}
+	pkt.Data, _ = EncodeData(authModel)
+	if err := connection.Write(pkt); err != nil {
+		log.Println(err)
+	}
 	log.Println("接连成功时")
 }
 
@@ -150,27 +166,59 @@ func (a *Agent) AddEvent(event iface.IEvent) {
 	a.conEvent.AddConnect(event.OnConnect)
 	a.conEvent.AddMessage(event.OnMessage)
 	a.conEvent.AddClose(event.OnClose)
-
+}
+func (a *Agent) AddConnect(fn func(context.Context, iface.IConnection)) {
+	a.conEvent.AddConnect(fn)
+}
+func (a *Agent) AddClose(fn func(context.Context, iface.IConnection)) {
+	a.conEvent.AddClose(fn)
 }
 func (a *Agent) AddProtocol(protocol iface.IProtocol) {
 	a.protocol = protocol
 }
 func (a *Agent) Start() {
-	go a.con.Run()
+	a.con.Run()
 }
 func (a *Agent) IsStop() bool {
 	return a.isStop.Get() == 1
 }
 func (a *Agent) Stop() {
 	if a.IsStop() {
-		a.isStop.Store(0)
-		a.con.Close()
+		a.isStop.Store(1)
+		a.ctxCancel()
 		a.wg.Wait()
 	}
 }
+
+/**
+重新连接服务器
+加入定时器定时重连直到成功
+在等待的时的数据..目前先丢弃
+*/
+func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
+	var id int64
+	if a.IsStop() {
+		return
+	}
+	id = src.AddTimer(5*time.Second, func() {
+		if a.IsStop() {
+			src.GetTimingWheel().Cancel(id)
+			return
+		}
+		con, err := ConnectServer()
+		if err != nil {
+			//出现错误等待下一次
+			log.Print("重新连接失败,等待下次连接")
+			return
+		}
+		a.con = net2.NewConn(a.ctx, con, a.wg, a.conEvent, a.protocol, 0)
+		a.Start()
+		src.GetTimingWheel().Cancel(id)
+	})
+}
 func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol) *Agent {
 	agent := &Agent{
-		isStop:   src.NewAtomicInt64(1),
+		isStop:   src.NewAtomicInt64(0),
 		conEvent: net2.NewEventWatch(),
 		wg:       &sync.WaitGroup{},
 	}
@@ -182,19 +230,31 @@ func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol) *A
 
 	return agent
 }
-func main() {
+
+func ConnectServer() (*net.TCPConn, error) {
 	utils.GlobalConfig.Load("json", "./client.json")
 	host := net.JoinHostPort(utils.GlobalConfig.GetString("ip"), utils.GlobalConfig.GetString("port"))
 	addr, err := net.ResolveTCPAddr("tcp", host)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	con, err := net.DialTCP("tcp", nil, addr)
 	if err != nil {
+		return nil, err
+	}
+	return con, nil
+}
+
+func main() {
+	con, err := ConnectServer()
+	if err != nil {
 		panic(err)
 	}
-
 	agent := NewAgent(con, AgentEvent{}, src.Protocol{})
+
+	//断线重连
+	agent.AddClose(agent.ReCon)
+
 	src.InitTimingWheel(agent.ctx)
 
 	//心跳单独实现.
@@ -203,15 +263,20 @@ func main() {
 	})
 	//目前定时汇报cpu,内存,硬盘使用情况
 	src.AddTimer(3*time.Second, func() {
-		SendCPU(agent.con)
+		//	SendCPU(agent.con)
 		SendMem(agent.con)
-		SendHHD(agent.con)
-		SendLoadAvg(agent.con)
+		//	SendHHD(agent.con)
+		//	SendLoadAvg(agent.con)
 	})
 
-	//todo agent的断线重连
+	src.AddTimer(3*time.Second, func() {
+		//	SendCPU(agent.con)
+		SendMem(agent.con)
+		//	SendHHD(agent.con)
+		//	SendLoadAvg(agent.con)
+	})
 
-	go agent.Start()
+	agent.Start()
 
 	log.Println("接受停止或者ctrl-c停止")
 	chSign := make(chan os.Signal)

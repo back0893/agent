@@ -6,24 +6,39 @@ import (
 	"context"
 	"encoding/gob"
 	"github.com/back0893/goTcp/iface"
+	"github.com/back0893/goTcp/utils"
 	"log"
 	"time"
 )
 
 type Event struct{}
 
-func (Event) OnConnect(ctx context.Context, connection iface.IConnection) {
-	connection.SetExtraData("heart", time.Now().Unix())
-	log.Println("连接成功")
+func (e *Event) SetTimeout(connection iface.IConnection) {
+	timeOut := time.Duration(utils.GlobalConfig.GetInt("heartTimeOut"))
+	//每次心跳为connect设置新的过期时间,如果写入或者读取超过就会触发timeout的错误
+	_ = connection.GetRawCon().SetDeadline(time.Now().Add(time.Second * timeOut))
 }
 
-func (Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
+func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
+	e.SetTimeout(connection)
+}
+
+func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*Packet)
 	r := bytes.NewReader(pkt.Data)
 	decoder := gob.NewDecoder(r)
 	switch pkt.Id {
+	case Auth:
+		var auth model.Auth
+		if err := decoder.Decode(&auth); err != nil {
+			log.Println("读取登录信息失败,关闭连接")
+			connection.Close()
+			return
+		}
+		connection.SetExtraData("auth", &auth)
+		log.Printf("agent登录,登录用户:%s\n", auth.Username)
 	case PING:
-		connection.SetExtraData("heart", time.Now().Unix())
+		e.SetTimeout(connection)
 		log.Println("心跳")
 	case CPU:
 		var cpu model.Cpu
@@ -75,5 +90,9 @@ func (Event) OnMessage(ctx context.Context, packet iface.IPacket, connection ifa
 }
 
 func (Event) OnClose(ctx context.Context, connection iface.IConnection) {
-	log.Println("断开连接")
+	if v, ok := connection.GetExtraData("auth"); ok {
+		auth := v.(*model.Auth)
+		log.Printf("用户%s断开连接", auth.Username)
+
+	}
 }

@@ -10,6 +10,7 @@ import (
 const (
 	HeaderLength = 21  //包的固定长度
 	PING         = 1   //心跳
+	Auth         = 100 //身份识别
 	CPU          = 101 //cpu使用
 	HHD          = 102 //硬盘使用
 	MEM          = 103 //内存使用
