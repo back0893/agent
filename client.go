@@ -41,6 +41,10 @@ func SendHeart(conn iface.IConnection) {
 func SendCPU(conn iface.IConnection) {
 	pkt := src.NewPkt()
 	pkt.Id = src.CPU
+	//这里cpu的范围区间才能计算,所以需要一个定时器来定时查询
+	src.AddTimer(5, func() {
+		_ = funcs.UpdateCpuStat()
+	})
 	cpu := funcs.CpuMetrics()
 
 	data, err := EncodeData(cpu)

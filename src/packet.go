@@ -1,22 +1,11 @@
 package src
 
 import (
+	"agent/src/g"
 	"bytes"
 	"encoding/binary"
 	"github.com/back0893/goTcp/iface"
 	"time"
-)
-
-const (
-	HeaderLength = 21  //包的固定长度
-	PING         = 1   //心跳
-	Auth         = 100 //身份识别
-	CPU          = 101 //cpu使用
-	HHD          = 102 //硬盘使用
-	MEM          = 103 //内存使用
-	LoadAvg      = 104 //负载
-	PortListen   = 105 //端口监听情况
-	Response     = 100 //通用回应
 )
 
 type Packet struct {
@@ -38,7 +27,7 @@ func NewPkt() *Packet {
 }
 
 func (pkt *Packet) Len() int {
-	var length int = HeaderLength
+	var length int = g.HeaderLength
 	length += len(pkt.Data)
 	return length
 }
@@ -67,6 +56,6 @@ func (pkt *Packet) Serialize() ([]byte, error) {
 
 func ComResponse() iface.IPacket {
 	pkt := NewPkt()
-	pkt.Id = Response
+	pkt.Id = g.Response
 	return pkt
 }

@@ -2,47 +2,16 @@ package main
 
 import (
 	"agent/src"
-	"fmt"
+	"agent/src/g"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
-	"github.com/spf13/cast"
-	"log"
-	"os"
-	"strings"
-	"time"
 )
 
-func mkdir(path string) error {
-	return os.Mkdir(path, 0755)
-}
 func init() {
-	var path string
-	p := utils.GlobalConfig.Get("runtime")
-	if p == nil {
-		path = "./runtime"
-	} else {
-		path = cast.ToString(p)
-	}
-	_, err := os.Stat(path)
-	if err != nil {
-		if os.IsExist(err) == false {
-			err := mkdir(path)
-			if err != nil {
-				panic(err)
-			}
-		} else {
-			panic(err)
-		}
-	}
-	filePath := fmt.Sprintf("%s/%s.log", strings.TrimRight(path, "/"), time.Now().Format("2006-01-02"))
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE, 0644)
-	if err != nil {
-		panic(err)
-	}
-	log.SetOutput(file)
+	g.LoadInit()
 }
+
 func main() {
-	utils.GlobalConfig.Load("json", "./app.json")
 	server := net.NewServer()
 	src.InitTimingWheel(server.GetContext())
 

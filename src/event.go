@@ -2,6 +2,7 @@ package src
 
 import (
 	"agent/src/agent/model"
+	"agent/src/g"
 	"bytes"
 	"context"
 	"encoding/gob"
@@ -28,7 +29,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 	r := bytes.NewReader(pkt.Data)
 	decoder := gob.NewDecoder(r)
 	switch pkt.Id {
-	case Auth:
+	case g.Auth:
 		var auth model.Auth
 		if err := decoder.Decode(&auth); err != nil {
 			log.Println("读取登录信息失败,关闭连接")
@@ -37,17 +38,17 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		}
 		connection.SetExtraData("auth", &auth)
 		log.Printf("agent登录,登录用户:%s\n", auth.Username)
-	case PING:
+	case g.PING:
 		e.SetTimeout(connection)
 		log.Println("心跳")
-	case CPU:
+	case g.CPU:
 		var cpu model.Cpu
 		if err := decoder.Decode(&cpu); err != nil {
 			log.Println("读取cpu信息失败")
 			break
 		}
 		log.Printf("cpu目前闲置%.2f,负载%.2f\n", cpu.Busy, cpu.Idle)
-	case HHD:
+	case g.HHD:
 		disks := make([]*model.Disk, 0)
 		if err := decoder.Decode(&disks); err != nil {
 			log.Println("读取硬盘信息失败")
@@ -59,14 +60,14 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			free := float64(disk.Free) / (1024 * 1024)
 			log.Printf("硬盘名称%s\n,总大小%.2fMB,已经使用%.2fMB,剩余%.2fMB\n", disk.FsFile, total, used, free)
 		}
-	case MEM:
+	case g.MEM:
 		var mem model.Memory
 		if err := decoder.Decode(&mem); err != nil {
 			log.Println("读取内存信息失败")
 			break
 		}
 		log.Printf("内存大小%.2fMB,已经使用%.2fMB\n", float64(mem.Total)/(1024*1024), float64(mem.Used)/(1024*1024))
-	case LoadAvg:
+	case g.LoadAvg:
 		loadAvgs := make([]*model.LoadAvg, 0)
 		if err := decoder.Decode(&loadAvgs); err != nil {
 			log.Println("读取负载信息失败")
@@ -75,7 +76,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		for _, loadAvg := range loadAvgs {
 			log.Printf("负载情况为%s=>%.2f\n", loadAvg.Name, loadAvg.Load)
 		}
-	case PortListen:
+	case g.PortListen:
 		ports := make([]*model.Port, 0)
 		if err := decoder.Decode(&ports); err != nil {
 			log.Println("读取监听端口信息失败")
