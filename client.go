@@ -4,6 +4,7 @@ import (
 	"agent/src"
 	"agent/src/agent/funcs"
 	"agent/src/agent/model"
+	"agent/src/g"
 	"bytes"
 	"context"
 	"encoding/gob"
@@ -38,7 +39,7 @@ func EncodeData(e interface{}) ([]byte, error) {
 }
 func SendHeart(conn iface.IConnection) {
 	pkt := src.NewPkt()
-	pkt.Id = src.PING
+	pkt.Id = g.PING
 	if err := conn.Write(pkt); err != nil {
 		log.Println(err)
 	}
@@ -52,7 +53,7 @@ func SendCPU(conn iface.IConnection) {
 	}
 
 	pkt := src.NewPkt()
-	pkt.Id = src.CPU
+	pkt.Id = g.CPU
 	//这里cpu的范围区间才能计算,所以需要一个定时器来定时查询
 	src.AddTimer(5, func() {
 		_ = funcs.UpdateCpuStat()
@@ -71,7 +72,7 @@ func SendCPU(conn iface.IConnection) {
 }
 func SendHHD(conn iface.IConnection) {
 	pkt := src.NewPkt()
-	pkt.Id = src.HHD
+	pkt.Id = g.HHD
 
 	disks, err := funcs.DiskUseMetrics()
 	if err != nil {
@@ -92,7 +93,7 @@ func SendHHD(conn iface.IConnection) {
 }
 func SendMem(conn iface.IConnection) {
 	pkt := src.NewPkt()
-	pkt.Id = src.MEM
+	pkt.Id = g.MEM
 	memory, err := funcs.MemMetrics()
 	if err != nil {
 		log.Println(err)
@@ -109,7 +110,7 @@ func SendMem(conn iface.IConnection) {
 }
 func SendLoadAvg(conn iface.IConnection) {
 	pkt := src.NewPkt()
-	pkt.Id = src.LoadAvg
+	pkt.Id = g.LoadAvg
 	loadAvg, err := funcs.LoadAvgMetrics()
 	if err != nil {
 		log.Println(err)
@@ -126,7 +127,7 @@ func SendLoadAvg(conn iface.IConnection) {
 }
 func SendPort(conn iface.IConnection) {
 	pkt := src.NewPkt()
-	pkt.Id = src.PortListen
+	pkt.Id = g.PortListen
 	listenPorts := utils.GlobalConfig.GetIntSlice("listenPort")
 	lp := make([]int64, 0)
 	for _, val := range listenPorts {
@@ -162,7 +163,7 @@ type AgentEvent struct{}
 func (a AgentEvent) OnConnect(ctx context.Context, connection iface.IConnection) {
 	//这个时候发送身份识别
 	pkt := src.NewPkt()
-	pkt.Id = src.Auth
+	pkt.Id = g.Auth
 	authModel := model.Auth{
 		Username: utils.GlobalConfig.GetString("username"),
 		Password: utils.GlobalConfig.GetString("password"),

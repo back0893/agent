@@ -4,7 +4,6 @@ import (
 	"agent/src"
 	"agent/src/g"
 	"flag"
-	"fmt"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
 )
@@ -13,16 +12,11 @@ var (
 	config string
 )
 
-func mkdir(path string) error {
-	return os.Mkdir(path, 0755)
-}
-func init() {
-	g.LoadInit()
-}
-
 func main() {
 	flag.StringVar(&config, "c", "./app.json", "加载的配置json")
 	flag.Parse()
+	//加载
+	g.LoadInit(config)
 
 	server := net.NewServer()
 	src.InitTimingWheel(server.GetContext())

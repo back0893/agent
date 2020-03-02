@@ -51,14 +51,14 @@ func setLogWrite() {
 		log.Println("无法接入日志")
 		return
 	}
-	fileWrite, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE, 0644)
+	fileWrite, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Println("无法接入日志")
 		return
 	}
 	log.SetOutput(fileWrite)
 }
-func LoadInit() {
-	utils.GlobalConfig.Load("json", "./app.json")
+func LoadInit(file string) {
+	utils.GlobalConfig.Load("json", file)
 	setLogWrite()
 }
