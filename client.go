@@ -128,7 +128,6 @@ func SendPort(conn iface.IConnection) {
 	for _, val := range listenPorts {
 		lp = append(lp, int64(val))
 	}
-
 	ports, err := funcs.ListenTcpPortMetrics(lp...)
 	if err != nil {
 		log.Println(err)
@@ -283,7 +282,7 @@ func main() {
 		SendHeart(agent.con)
 	})
 	//目前定时汇报cpu,内存,硬盘使用情况
-	src.AddTimer(10*time.Second, func() {
+	src.AddTimer(5*time.Second, func() {
 		SendCPU(agent.con)
 		SendMem(agent.con)
 		SendHHD(agent.con)

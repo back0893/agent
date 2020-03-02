@@ -21,6 +21,8 @@ func mkdir(path string) error {
 	return os.Mkdir(path, 0755)
 }
 func init() {
+	utils.GlobalConfig.Load("json", config)
+
 	var path string
 	p := utils.GlobalConfig.Get("runtime")
 	if p == nil {
@@ -40,7 +42,7 @@ func init() {
 		}
 	}
 	filePath := fmt.Sprintf("%s/%s.log", strings.TrimRight(path, "/"), time.Now().Format("2006-01-02"))
-	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE, 0644)
+	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +52,6 @@ func main() {
 	flag.StringVar(&config, "c", "./app.json", "加载的配置json")
 	flag.Parse()
 
-	utils.GlobalConfig.Load("json", config)
 	server := net.NewServer()
 	src.InitTimingWheel(server.GetContext())
 

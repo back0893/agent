@@ -37,9 +37,8 @@ func ListenUdpPortMetrics(ports ...int64) ([]*model.Port, error) {
 
 func listenPort(metric string, ports []int64, listenPorts []int64) []*model.Port {
 	mvs := make([]*model.Port, 0, 10)
-	var m model.Port
 	for _, port := range ports {
-		m = model.Port{
+		m := &model.Port{
 			Type:   metric,
 			Port:   port,
 			Listen: false,
@@ -47,7 +46,7 @@ func listenPort(metric string, ports []int64, listenPorts []int64) []*model.Port
 		if slice.ContainsInt64(listenPorts, port) {
 			m.Listen = true
 		}
-		mvs = append(mvs, &m)
+		mvs = append(mvs, m)
 	}
 	return mvs
 }
