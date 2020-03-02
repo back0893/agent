@@ -46,7 +46,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			log.Println("读取cpu信息失败")
 			break
 		}
-		log.Printf("cpu目前闲置%.2f,负载%.2f\n", cpu.Busy, cpu.Idle)
+		log.Printf("cpu目前负载%.2f,闲置%.2f\n", cpu.Busy, cpu.Idle)
 	case HHD:
 		disks := make([]*model.Disk, 0)
 		if err := decoder.Decode(&disks); err != nil {
@@ -57,7 +57,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			total := float64(disk.Total) / (1024 * 1024)
 			used := float64(disk.Used) / (1024 * 1024)
 			free := float64(disk.Free) / (1024 * 1024)
-			log.Printf("硬盘名称%s\n,总大小%.2fMB,已经使用%.2fMB,剩余%.2fMB\n", disk.FsFile, total, used, free)
+			log.Printf("硬盘名称%s,总大小%.2fMB,已经使用%.2fMB,剩余%.2fMB\n", disk.FsFile, total, used, free)
 		}
 	case MEM:
 		var mem model.Memory
@@ -81,8 +81,13 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			log.Println("读取监听端口信息失败")
 			break
 		}
+		var listenStatus string
 		for _, port := range ports {
-			log.Printf("监听端口协议为%s,端口号%d\n", port.Type, port.Port)
+			listenStatus = "下线"
+			if port.Listen {
+				listenStatus = "上线"
+			}
+			log.Printf("监听端口协议为%s,端口号%d,监控情况%s\n", port.Type, port.Port, listenStatus)
 		}
 	}
 	packet = ComResponse()

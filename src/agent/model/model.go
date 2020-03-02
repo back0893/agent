@@ -24,6 +24,7 @@ type Memory struct {
 }
 
 type Port struct {
-	Type string
-	Port int64
+	Type   string
+	Port   int64
+	Listen bool
 }

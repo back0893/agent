@@ -2,6 +2,7 @@ package main
 
 import (
 	"agent/src"
+	"flag"
 	"fmt"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
@@ -10,6 +11,10 @@ import (
 	"os"
 	"strings"
 	"time"
+)
+
+var (
+	config string
 )
 
 func mkdir(path string) error {
@@ -42,7 +47,10 @@ func init() {
 	log.SetOutput(file)
 }
 func main() {
-	utils.GlobalConfig.Load("json", "./app.json")
+	flag.StringVar(&config, "c", "./app.json", "加载的配置json")
+	flag.Parse()
+
+	utils.GlobalConfig.Load("json", config)
 	server := net.NewServer()
 	src.InitTimingWheel(server.GetContext())
 

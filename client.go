@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"flag"
 	"github.com/back0893/goTcp/iface"
 	net2 "github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
@@ -21,6 +22,10 @@ import (
 
 const (
 	AGENT string = "agent"
+)
+
+var (
+	cfg string
 )
 
 func EncodeData(e interface{}) ([]byte, error) {
@@ -39,6 +44,13 @@ func SendHeart(conn iface.IConnection) {
 	}
 }
 func SendCPU(conn iface.IConnection) {
+	//更新cpu状态
+	funcs.UpdateCpuStat()
+	if funcs.CpuPrepared() == false {
+		//如果cpu状态还未准备好久不发送
+		return
+	}
+
 	pkt := src.NewPkt()
 	pkt.Id = src.CPU
 	cpu := funcs.CpuMetrics()
@@ -111,12 +123,18 @@ func SendLoadAvg(conn iface.IConnection) {
 func SendPort(conn iface.IConnection) {
 	pkt := src.NewPkt()
 	pkt.Id = src.PortListen
-	loadAvg, err := funcs.ListenTcpPortMetrics(80, 10086)
+	listenPorts := utils.GlobalConfig.GetIntSlice("listenPort")
+	lp := make([]int64, 0)
+	for _, val := range listenPorts {
+		lp = append(lp, int64(val))
+	}
+
+	ports, err := funcs.ListenTcpPortMetrics(lp...)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	pkt.Data, err = EncodeData(loadAvg)
+	pkt.Data, err = EncodeData(ports)
 	if err != nil {
 		log.Println(err)
 		return
@@ -143,8 +161,8 @@ func (a AgentEvent) OnConnect(ctx context.Context, connection iface.IConnection)
 	pkt := src.NewPkt()
 	pkt.Id = src.Auth
 	authModel := model.Auth{
-		Username: "client1",
-		Password: "123456",
+		Username: utils.GlobalConfig.GetString("username"),
+		Password: utils.GlobalConfig.GetString("password"),
 	}
 	pkt.Data, _ = EncodeData(authModel)
 	if err := connection.Write(pkt); err != nil {
@@ -232,7 +250,7 @@ func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol) *A
 }
 
 func ConnectServer() (*net.TCPConn, error) {
-	utils.GlobalConfig.Load("json", "./client.json")
+	utils.GlobalConfig.Load("json", cfg)
 	host := net.JoinHostPort(utils.GlobalConfig.GetString("ip"), utils.GlobalConfig.GetString("port"))
 	addr, err := net.ResolveTCPAddr("tcp", host)
 	if err != nil {
@@ -244,8 +262,10 @@ func ConnectServer() (*net.TCPConn, error) {
 	}
 	return con, nil
 }
-
 func main() {
+	flag.StringVar(&cfg, "c", "./app.json", "加载的配置json")
+	flag.Parse()
+
 	con, err := ConnectServer()
 	if err != nil {
 		panic(err)
@@ -258,22 +278,17 @@ func main() {
 	src.InitTimingWheel(agent.ctx)
 
 	//心跳单独实现.
-	src.AddTimer(2*time.Second, func() {
+	headrtBeat := utils.GlobalConfig.GetInt("heartBeat")
+	src.AddTimer(time.Second*time.Duration(headrtBeat), func() {
 		SendHeart(agent.con)
 	})
 	//目前定时汇报cpu,内存,硬盘使用情况
-	src.AddTimer(3*time.Second, func() {
-		//	SendCPU(agent.con)
+	src.AddTimer(10*time.Second, func() {
+		SendCPU(agent.con)
 		SendMem(agent.con)
-		//	SendHHD(agent.con)
-		//	SendLoadAvg(agent.con)
-	})
-
-	src.AddTimer(3*time.Second, func() {
-		//	SendCPU(agent.con)
-		SendMem(agent.con)
-		//	SendHHD(agent.con)
-		//	SendLoadAvg(agent.con)
+		SendHHD(agent.con)
+		SendLoadAvg(agent.con)
+		SendPort(agent.con)
 	})
 
 	agent.Start()
