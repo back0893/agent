@@ -5,7 +5,11 @@ import (
 	"bytes"
 	"errors"
 	"github.com/gomodule/redigo/redis"
+	"io/ioutil"
+	"os"
 	"os/exec"
+	"strconv"
+	"syscall"
 )
 
 type RedisService struct {
@@ -15,17 +19,48 @@ func NewRedisService() *RedisService {
 	return &RedisService{}
 }
 
+func (r RedisService) GetPid() int {
+	file, err := os.Open("./pid")
+	if err != nil {
+		return 0
+	}
+	data, err := ioutil.ReadAll(file)
+	if err != nil {
+		return 0
+	}
+	pid, err := strconv.Atoi(string(bytes.Trim(data, "\n\r")))
+	if err != nil {
+		return 0
+	}
+	return pid
+}
 func (r RedisService) Start() error {
-	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1 & echo &!>./redisPid")
+	if r.GetPid() > 0 {
+		return errors.New("redis已经运行")
+	}
+	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./pid")
 	return cmd.Run()
 }
 
-func (r RedisService) Stop() {
-	//防止因为人工或者其他原因导致redis的pid改变
+func (r RedisService) Stop() error {
+	pid := r.GetPid()
+	if pid == 0 {
+		return errors.New("redis灭有在运行")
+	}
+	syscall.Kill(pid, syscall.SIGKILL)
+	//参数pid
+	os.Remove("./pid")
+	return nil
 }
 
-func (r RedisService) Restart() {
-	panic("implement me")
+func (r RedisService) Restart() error {
+	if err := r.Stop(); err != nil {
+		return err
+	}
+	if err := r.Start(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *RedisService) Status(address string, auth string) (map[string]string, error) {

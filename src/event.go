@@ -90,6 +90,8 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			}
 			log.Printf("监听端口协议为%s,端口号%d,监控情况%s\n", port.Type, port.Port, listenStatus)
 		}
+	case g.ServiceResponse:
+
 	}
 	packet = ComResponse()
 	connection.Write(packet)

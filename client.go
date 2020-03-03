@@ -4,10 +4,12 @@ import (
 	"agent/src"
 	"agent/src/agent/funcs"
 	"agent/src/agent/model"
+	"agent/src/agent/services"
 	"agent/src/g"
 	"bytes"
 	"context"
 	"encoding/gob"
+	"errors"
 	"flag"
 	"github.com/back0893/goTcp/iface"
 	net2 "github.com/back0893/goTcp/net"
@@ -177,7 +179,38 @@ func (a AgentEvent) OnConnect(ctx context.Context, connection iface.IConnection)
 
 func (a AgentEvent) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*src.Packet)
-	log.Println("接受的回应id=>", pkt.Id)
+	if pkt.Id == g.Service {
+		service := model.Service{}
+		decoder := gob.NewDecoder(bytes.NewReader(pkt.Data))
+		_ = decoder.Decode(&service)
+		switch service.Cmd {
+		case "redis":
+			redis := services.NewRedisService()
+			err := errors.New("未知命令")
+			switch service.Action {
+			case "start":
+				err = redis.Start()
+			case "stop":
+				err = redis.Stop()
+			case "status":
+				pid := redis.GetPid()
+				if pid > 0 {
+					err = errors.New("redis正在运行")
+				} else {
+					err = errors.New("redis没有运行")
+				}
+			case "restart":
+				err = redis.Restart()
+			}
+			pkt := src.NewPkt()
+			pkt.Id = g.ServiceResponse
+			pkt.Data = []byte(err.Error())
+			connection.Write(pkt)
+		}
+
+	} else {
+		log.Println("接受的回应id=>", pkt.Id)
+	}
 }
 
 func (a AgentEvent) OnClose(ctx context.Context, connection iface.IConnection) {

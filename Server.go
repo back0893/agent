@@ -4,8 +4,11 @@ import (
 	"agent/src"
 	"agent/src/g"
 	"flag"
+	"fmt"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
+	"io"
+	"net/http"
 )
 
 var (
@@ -30,5 +33,18 @@ func main() {
 
 	ip := utils.GlobalConfig.GetString("Ip")
 	port := utils.GlobalConfig.GetInt("Port")
+
+	//启动http
+	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+		conns := server.GetConnections()
+		conns.Range(func(key, value interface{}) bool {
+			con := value.(*net.Connection)
+			io.WriteString(writer, fmt.Sprintf("当前连接对象:%s\n", con.GetId()))
+			return true
+		})
+		io.WriteString(writer, "==end==")
+	})
+	go http.ListenAndServe("0.0.0.0:9123", nil)
+
 	server.Listen(ip, port)
 }
