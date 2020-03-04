@@ -183,7 +183,7 @@ func (a AgentEvent) OnMessage(ctx context.Context, packet iface.IPacket, connect
 		service := model.Service{}
 		decoder := gob.NewDecoder(bytes.NewReader(pkt.Data))
 		_ = decoder.Decode(&service)
-		switch service.Cmd {
+		switch service.Service {
 		case "redis":
 			redis := services.NewRedisService()
 			err := errors.New("未知命令")
@@ -320,13 +320,13 @@ func main() {
 		SendHeart(agent.con)
 	})
 	//目前定时汇报cpu,内存,硬盘使用情况
-	src.AddTimer(5*time.Second, func() {
-		SendCPU(agent.con)
-		SendMem(agent.con)
-		SendHHD(agent.con)
-		SendLoadAvg(agent.con)
-		SendPort(agent.con)
-	})
+	//src.AddTimer(5*time.Second, func() {
+	//	SendCPU(agent.con)
+	//	SendMem(agent.con)
+	//	SendHHD(agent.con)
+	//	SendLoadAvg(agent.con)
+	//	SendPort(agent.con)
+	//})
 
 	agent.Start()
 

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
+	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/utils"
 	"log"
@@ -91,7 +92,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			log.Printf("监听端口协议为%s,端口号%d,监控情况%s\n", port.Type, port.Port, listenStatus)
 		}
 	case g.ServiceResponse:
-
+		fmt.Println(string(pkt.Data))
 	}
 	packet = ComResponse()
 	connection.Write(packet)

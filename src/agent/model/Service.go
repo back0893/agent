@@ -1,6 +1,6 @@
 package model
 
 type Service struct {
-	Cmd    string
-	Action string
+	Service string
+	Action  string
 }
