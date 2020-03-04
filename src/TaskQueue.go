@@ -1,25 +1,22 @@
 package src
 
-import "sync"
-
-type Action struct {
-	DeviceId string   //agent编号
-	Action   string   //动作
-	Args     []string //参数
-}
+import (
+	"agent/src/agent/model"
+	"sync"
+)
 
 type TaskQueue struct {
-	queue []*Action
+	queue []*model.Service
 	cond  *sync.Cond
 }
 
 func NewTaskQueue() *TaskQueue {
 	return &TaskQueue{
-		queue: make([]*Action, 0),
+		queue: make([]*model.Service, 0),
 		cond:  sync.NewCond(&sync.Mutex{}),
 	}
 }
-func (task *TaskQueue) Push(action *Action) {
+func (task *TaskQueue) Push(action *model.Service) {
 	task.cond.L.Lock()
 	defer task.cond.L.Unlock()
 	task.queue = append(task.queue, action)
@@ -29,7 +26,7 @@ func (task *TaskQueue) Push(action *Action) {
 /**
 等待一直有值返回,如果请注意
 */
-func (task *TaskQueue) Pop() *Action {
+func (task *TaskQueue) Pop() *model.Service {
 	task.cond.L.Lock()
 	defer task.cond.L.Unlock()
 	var n int

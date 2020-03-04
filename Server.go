@@ -5,6 +5,7 @@ import (
 	"agent/src/g"
 	"agent/src/http"
 	"agent/src/http/handler"
+	"context"
 	"flag"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
@@ -14,10 +15,14 @@ var (
 	config string
 )
 
-func httpServer() {
-	s := http.NewServer()
+func httpServer(ctx context.Context) {
+	s := http.NewServer("0.0.0.0:9123")
 	s.AddHandler("/", handler.SendTask)
 	s.Run()
+	select {
+	case <-ctx.Done():
+		s.Close(ctx)
+	}
 }
 func main() {
 	flag.StringVar(&config, "c", "./app.json", "加载的配置json")
@@ -26,7 +31,6 @@ func main() {
 	g.LoadInit(config)
 
 	server := net.NewServer()
-
 	src.InitTimingWheel(server.GetContext())
 
 	server.AddEvent(&src.Event{})
@@ -36,7 +40,8 @@ func main() {
 	port := utils.GlobalConfig.GetInt("Port")
 
 	//启动http
-	go httpServer()
+	go httpServer(server.GetContext())
+	//todo http使用tcp连接上来,然后由这个转发给各个agent
 
 	server.Listen(ip, port)
 }

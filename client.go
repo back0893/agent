@@ -9,8 +9,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/gob"
-	"errors"
 	"flag"
+	"fmt"
 	"github.com/back0893/goTcp/iface"
 	net2 "github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
@@ -158,6 +158,7 @@ type Agent struct {
 	ctxCancel context.CancelFunc
 	isStop    *src.AtomicInt64
 	wg        *sync.WaitGroup
+	taskQueue *src.TaskQueue
 }
 
 type AgentEvent struct{}
@@ -180,32 +181,14 @@ func (a AgentEvent) OnConnect(ctx context.Context, connection iface.IConnection)
 func (a AgentEvent) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*src.Packet)
 	if pkt.Id == g.Service {
-		service := model.Service{}
+		service := &model.Service{}
 		decoder := gob.NewDecoder(bytes.NewReader(pkt.Data))
-		_ = decoder.Decode(&service)
-		switch service.Service {
-		case "redis":
-			redis := services.NewRedisService()
-			err := errors.New("未知命令")
-			switch service.Action {
-			case "start":
-				err = redis.Start()
-			case "stop":
-				err = redis.Stop()
-			case "status":
-				pid := redis.GetPid()
-				if pid > 0 {
-					err = errors.New("redis正在运行")
-				} else {
-					err = errors.New("redis没有运行")
-				}
-			case "restart":
-				err = redis.Restart()
-			}
-			pkt := src.NewPkt()
-			pkt.Id = g.ServiceResponse
-			pkt.Data = []byte(err.Error())
-			connection.Write(pkt)
+		if err := decoder.Decode(service); err == nil {
+			agent := ctx.Value(AGENT).(*Agent)
+			agent.taskQueue.Push(service)
+		} else {
+			//todo 发送的消息不合规
+			fmt.Println("发送的消息不合规")
 		}
 
 	} else {
@@ -245,38 +228,56 @@ func (a *Agent) Stop() {
 	}
 }
 func (a *Agent) RunTask() {
-	taskQueue := src.NewTaskQueue()
 	//读取taskQueue,执行相应的操作
 	go func() {
 		for {
-			action := taskQueue.Pop()
-			var ipacket *src.Packet
-			switch action.Action {
-			case "start":
-				fallthrough
-			case "status":
-				fallthrough
-			case "stop":
-				fallthrough
-			case "restart":
-				ipacket = src.NewPkt()
-				ipacket.Id = g.Service
-				b := bytes.NewBuffer([]byte{})
-				encoder := gob.NewEncoder(b)
-				service := model.Service{
-					Service: "redis",
-					Action:  action.Action,
+			service := a.taskQueue.Pop()
+			pkt := src.NewPkt()
+			pkt.Id = g.ServiceResponse
+			var str = "未知命令"
+			switch service.Service {
+			case "redis":
+				redis := services.NewRedisService()
+				switch service.Action {
+				case "start":
+					err := redis.Start()
+					if err != nil {
+						str = "redis启动失败"
+					} else {
+						str = "redis启动成功"
+					}
+				case "stop":
+					err := redis.Stop()
+					if err != nil {
+						str = "redis停止失败"
+					} else {
+						str = "redis停止成功"
+					}
+				case "status":
+					pid := redis.GetPid()
+					if pid > 0 {
+						str = "redis正在运行"
+					} else {
+						str = "redis没有运行"
+					}
+				case "restart":
+					err := redis.Restart()
+					if err != nil {
+						str = "redis重启失败"
+					} else {
+						str = "redis重启成功"
+					}
 				}
-				encoder.Encode(service)
-				ipacket.Data = b.Bytes()
 			default:
-				log.Println("新增失败,命令错误")
-				continue
 			}
-			a.con.Write(ipacket)
+			fmt.Println(str)
+			pkt.Data = []byte(str)
+			err := a.con.Write(pkt)
+			if err != nil {
+				//todo 发送失败..应该有后续操作
+			}
 		}
 	}()
-
 }
 
 /**
@@ -307,13 +308,14 @@ func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
 }
 func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol) *Agent {
 	agent := &Agent{
-		isStop:   src.NewAtomicInt64(0),
-		conEvent: net2.NewEventWatch(),
-		wg:       &sync.WaitGroup{},
+		isStop:    src.NewAtomicInt64(0),
+		conEvent:  net2.NewEventWatch(),
+		wg:        &sync.WaitGroup{},
+		taskQueue: src.NewTaskQueue(),
 	}
 	agent.AddProtocol(protocol)
 	agent.AddEvent(event)
-	agent.ctx, agent.ctxCancel = context.WithCancel(context.Background())
+	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), AGENT, agent))
 
 	agent.con = net2.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 
@@ -362,6 +364,7 @@ func main() {
 	//	SendPort(agent.con)
 	//})
 
+	go agent.RunTask()
 	agent.Start()
 
 	log.Println("接受停止或者ctrl-c停止")
