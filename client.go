@@ -244,6 +244,40 @@ func (a *Agent) Stop() {
 		a.wg.Wait()
 	}
 }
+func (a *Agent) RunTask() {
+	taskQueue := src.NewTaskQueue()
+	//读取taskQueue,执行相应的操作
+	go func() {
+		for {
+			action := taskQueue.Pop()
+			var ipacket *src.Packet
+			switch action.Action {
+			case "start":
+				fallthrough
+			case "status":
+				fallthrough
+			case "stop":
+				fallthrough
+			case "restart":
+				ipacket = src.NewPkt()
+				ipacket.Id = g.Service
+				b := bytes.NewBuffer([]byte{})
+				encoder := gob.NewEncoder(b)
+				service := model.Service{
+					Service: "redis",
+					Action:  action.Action,
+				}
+				encoder.Encode(service)
+				ipacket.Data = b.Bytes()
+			default:
+				log.Println("新增失败,命令错误")
+				continue
+			}
+			a.con.Write(ipacket)
+		}
+	}()
+
+}
 
 /**
 重新连接服务器
