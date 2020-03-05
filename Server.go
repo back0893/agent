@@ -2,13 +2,16 @@ package main
 
 import (
 	"agent/src"
+	"agent/src/Server"
 	"agent/src/g"
 	"agent/src/http"
 	"agent/src/http/handler"
 	"context"
 	"flag"
+	"fmt"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
+	"log"
 )
 
 var (
@@ -16,9 +19,17 @@ var (
 )
 
 func httpServer(ctx context.Context, server *net.Server) {
-	s := http.NewServer("0.0.0.0:9123")
+	host := utils.GlobalConfig.GetString("http.host")
+	port := utils.GlobalConfig.GetInt("http.port")
+	addr := fmt.Sprintf("%s:%d", host, port)
+	log.Printf("启动http服务器:%s", addr)
+	s := http.NewServer(addr)
 	s.AddHandler("/", handler.WrapperSendTask(server))
-	go s.Run()
+	go func() {
+		if err := s.Run(); err != nil {
+			panic(err)
+		}
+	}()
 	select {
 	case <-ctx.Done():
 		s.Close(ctx)
@@ -33,7 +44,7 @@ func main() {
 	server := net.NewServer()
 	src.InitTimingWheel(server.GetContext())
 
-	server.AddEvent(&src.Event{})
+	server.AddEvent(&Server.Event{})
 	server.AddProtocol(&src.Protocol{})
 
 	ip := utils.GlobalConfig.GetString("Ip")

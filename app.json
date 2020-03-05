@@ -1,5 +1,9 @@
 {
   "ip": "0.0.0.0",
   "port": 8001,
-  "heartTimeOut": 15
+  "heartTimeOut": 15,
+  "http": {
+    "host": "0.0.0.0",
+    "port": 9123
+  }
 }

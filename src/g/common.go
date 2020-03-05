@@ -2,6 +2,8 @@ package g
 
 import (
 	"agent/src/agent/model"
+	"bytes"
+	"encoding/gob"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/net"
 	"os"
@@ -26,4 +28,22 @@ func GetCon(s *net.Server, username string) (con iface.IConnection, has bool) {
 		return true
 	})
 	return con, has
+}
+
+func EncodeData(e interface{}) ([]byte, error) {
+	buffer := bytes.NewBuffer([]byte{})
+	encoder := gob.NewEncoder(buffer)
+	if err := encoder.Encode(e); err != nil {
+		return nil, err
+	}
+	return buffer.Bytes(), nil
+}
+
+func DecodeData(data []byte, e interface{}) error {
+	buffer := bytes.NewReader([]byte{})
+	decoder := gob.NewDecoder(buffer)
+	if err := decoder.Decode(e); err != nil {
+		return err
+	}
+	return nil
 }

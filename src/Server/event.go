@@ -1,6 +1,7 @@
-package src
+package Server
 
 import (
+	"agent/src"
 	"agent/src/agent/model"
 	"agent/src/g"
 	"bytes"
@@ -26,7 +27,7 @@ func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 }
 
 func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
-	pkt := packet.(*Packet)
+	pkt := packet.(*src.Packet)
 	r := bytes.NewReader(pkt.Data)
 	decoder := gob.NewDecoder(r)
 	switch pkt.Id {
@@ -94,7 +95,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 	case g.ServiceResponse:
 		fmt.Println(string(pkt.Data))
 	}
-	packet = ComResponse()
+	packet = src.ComResponse()
 	connection.Write(packet)
 }
 

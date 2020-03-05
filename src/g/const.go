@@ -14,4 +14,7 @@ const (
 
 	Service         = 201 //对于service的命令
 	ServiceResponse = 301 //service执行后的回应
+
+	//agent的context传递key
+	AGENT string = "agent"
 )

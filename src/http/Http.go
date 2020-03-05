@@ -9,6 +9,9 @@ type Server struct {
 	Server *http.Server
 }
 
+//本来这里最好使用context来传递一些值得
+//但是1.13才支持为了更好兼容性,放弃,转而是用闭包支持
+
 func NewServer(addr string) *Server {
 	return &Server{
 		Server: &http.Server{Addr: addr, Handler: nil},
