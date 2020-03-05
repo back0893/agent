@@ -51,8 +51,8 @@ func main() {
 	port := utils.GlobalConfig.GetInt("Port")
 
 	//启动http
+	//http使用tcp连接上来,然后由这个转发给各个agent
 	go httpServer(server.GetContext(), server)
-	//todo http使用tcp连接上来,然后由这个转发给各个agent
 
 	server.Listen(ip, port)
 }
