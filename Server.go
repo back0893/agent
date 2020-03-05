@@ -15,10 +15,10 @@ var (
 	config string
 )
 
-func httpServer(ctx context.Context) {
+func httpServer(ctx context.Context, server *net.Server) {
 	s := http.NewServer("0.0.0.0:9123")
-	s.AddHandler("/", handler.SendTask)
-	s.Run()
+	s.AddHandler("/", handler.WrapperSendTask(server))
+	go s.Run()
 	select {
 	case <-ctx.Done():
 		s.Close(ctx)
@@ -40,7 +40,7 @@ func main() {
 	port := utils.GlobalConfig.GetInt("Port")
 
 	//启动http
-	go httpServer(server.GetContext())
+	go httpServer(server.GetContext(), server)
 	//todo http使用tcp连接上来,然后由这个转发给各个agent
 
 	server.Listen(ip, port)

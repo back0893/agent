@@ -1,9 +1,12 @@
 package src
 
 import (
+	"agent/src/agent/model"
 	"agent/src/g"
 	"bytes"
 	"encoding/binary"
+	"encoding/gob"
+	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"time"
 )
@@ -54,8 +57,21 @@ func (pkt *Packet) Serialize() ([]byte, error) {
 	return buffer.Bytes(), nil
 }
 
+/**
+常用回应
+*/
 func ComResponse() iface.IPacket {
 	pkt := NewPkt()
 	pkt.Id = g.Response
+	return pkt
+}
+func ServicePkt(service *model.Service) iface.IPacket {
+	pkt := NewPkt()
+	pkt.Id = g.Service
+	fmt.Println(service)
+	buf := bytes.NewBuffer([]byte{})
+	encoder := gob.NewEncoder(buf)
+	_ = encoder.Encode(service)
+	pkt.Data = buf.Bytes()
 	return pkt
 }

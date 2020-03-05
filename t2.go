@@ -30,8 +30,8 @@ func main() {
 	case "stop":
 		err = redis.Stop()
 	case "status":
-		pid := redis.GetPid()
-		if pid > 0 {
+		status := redis.Status()
+		if status {
 			fmt.Println("redis正在运行")
 		} else {
 			err = errors.New("redis没有运行")

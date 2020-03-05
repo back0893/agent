@@ -254,8 +254,8 @@ func (a *Agent) RunTask() {
 						str = "redis停止成功"
 					}
 				case "status":
-					pid := redis.GetPid()
-					if pid > 0 {
+					status := redis.Status()
+					if status {
 						str = "redis正在运行"
 					} else {
 						str = "redis没有运行"

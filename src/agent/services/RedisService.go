@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"github.com/gomodule/redigo/redis"
 	"io/ioutil"
 	"os"
@@ -13,6 +14,24 @@ import (
 )
 
 type RedisService struct {
+}
+
+func (r RedisService) Status() bool {
+	pid := r.GetPid()
+	if pid == 0 {
+		return false
+	}
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("ps -p %d |grep -v \"PID TTY\"|wc -l", pid))
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	out = bytes.Trim(out, "\r\n")
+	wc, _ := strconv.Atoi(string(out))
+	if wc > 0 {
+		return true
+	}
+	return false
 }
 
 func NewRedisService() *RedisService {
@@ -63,7 +82,7 @@ func (r RedisService) Restart() error {
 	return nil
 }
 
-func (r *RedisService) Status(address string, auth string) (map[string]string, error) {
+func (r *RedisService) info(address string, auth string) (map[string]string, error) {
 	c, err := redis.Dial("tcp", address)
 	if err != nil {
 		return nil, errors.New("redis连接失败")
