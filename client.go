@@ -34,6 +34,13 @@ func main() {
 	src.AddTimer(time.Second*time.Duration(headrtBeat), func() {
 		cron.SendHeart(agentClient.GetCon())
 	})
+	src.AddTimer(time.Second*5, func() {
+		cron.SendMem(agentClient.GetCon())
+		cron.SendPort(agentClient.GetCon())
+		cron.SendCPU(agentClient.GetCon())
+		cron.SendHHD(agentClient.GetCon())
+		cron.SendLoadAvg(agentClient.GetCon())
+	})
 	go agentClient.RunTask()
 	agentClient.Start()
 

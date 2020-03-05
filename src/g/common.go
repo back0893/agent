@@ -40,7 +40,7 @@ func EncodeData(e interface{}) ([]byte, error) {
 }
 
 func DecodeData(data []byte, e interface{}) error {
-	buffer := bytes.NewReader([]byte{})
+	buffer := bytes.NewReader(data)
 	decoder := gob.NewDecoder(buffer)
 	if err := decoder.Decode(e); err != nil {
 		return err
