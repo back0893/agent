@@ -4,9 +4,7 @@ import (
 	"agent/src"
 	"agent/src/agent/model"
 	"agent/src/g"
-	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/utils"
@@ -34,8 +32,7 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 	pkt := packet.(*src.Packet)
 	if pkt.Id == g.Service {
 		service := &model.Service{}
-		decoder := gob.NewDecoder(bytes.NewReader(pkt.Data))
-		if err := decoder.Decode(service); err == nil {
+		if err := g.DecodeData(pkt.Data, service); err == nil {
 			agent := ctx.Value(g.AGENT).(*Agent)
 			agent.taskQueue.Push(service)
 		} else {

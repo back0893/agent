@@ -5,7 +5,6 @@ import (
 	"agent/src/g"
 	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"time"
@@ -69,9 +68,6 @@ func ServicePkt(service *model.Service) iface.IPacket {
 	pkt := NewPkt()
 	pkt.Id = g.Service
 	fmt.Println(service)
-	buf := bytes.NewBuffer([]byte{})
-	encoder := gob.NewEncoder(buf)
-	_ = encoder.Encode(service)
-	pkt.Data = buf.Bytes()
+	pkt.Data, _ = g.EncodeData(service)
 	return pkt
 }

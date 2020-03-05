@@ -4,9 +4,7 @@ import (
 	"agent/src"
 	"agent/src/agent/model"
 	"agent/src/g"
-	"bytes"
 	"context"
-	"encoding/gob"
 	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/utils"
@@ -28,12 +26,10 @@ func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 
 func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*src.Packet)
-	r := bytes.NewReader(pkt.Data)
-	decoder := gob.NewDecoder(r)
 	switch pkt.Id {
 	case g.Auth:
 		var auth model.Auth
-		if err := decoder.Decode(&auth); err != nil {
+		if err := g.DecodeData(pkt.Data, &auth); err != nil {
 			log.Println("读取登录信息失败,关闭连接")
 			connection.Close()
 			return
@@ -45,14 +41,14 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		log.Println("心跳")
 	case g.CPU:
 		var cpu model.Cpu
-		if err := decoder.Decode(&cpu); err != nil {
+		if err := g.DecodeData(pkt.Data, &cpu); err != nil {
 			log.Println("读取cpu信息失败")
 			break
 		}
 		log.Printf("cpu目前负载%.2f,闲置%.2f\n", cpu.Busy, cpu.Idle)
 	case g.HHD:
 		disks := make([]*model.Disk, 0)
-		if err := decoder.Decode(&disks); err != nil {
+		if err := g.DecodeData(pkt.Data, &disks); err != nil {
 			log.Println("读取硬盘信息失败")
 			break
 		}
@@ -64,14 +60,14 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		}
 	case g.MEM:
 		var mem model.Memory
-		if err := decoder.Decode(&mem); err != nil {
+		if err := g.DecodeData(pkt.Data, &mem); err != nil {
 			log.Println("读取内存信息失败")
 			break
 		}
 		log.Printf("内存大小%.2fMB,已经使用%.2fMB\n", float64(mem.Total)/(1024*1024), float64(mem.Used)/(1024*1024))
 	case g.LoadAvg:
 		loadAvgs := make([]*model.LoadAvg, 0)
-		if err := decoder.Decode(&loadAvgs); err != nil {
+		if err := g.DecodeData(pkt.Data, &loadAvgs); err != nil {
 			log.Println("读取负载信息失败")
 			break
 		}
@@ -80,7 +76,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		}
 	case g.PortListen:
 		ports := make([]*model.Port, 0)
-		if err := decoder.Decode(&ports); err != nil {
+		if err := g.DecodeData(pkt.Data, &ports); err != nil {
 			log.Println("读取监听端口信息失败")
 			break
 		}
