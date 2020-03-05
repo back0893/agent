@@ -2,10 +2,10 @@ package main
 
 import (
 	"agent/src"
-	"agent/src/Server"
 	"agent/src/g"
 	"agent/src/http"
 	"agent/src/http/handler"
+	"agent/src/server"
 	"context"
 	"flag"
 	"fmt"
@@ -41,18 +41,18 @@ func main() {
 	//加载
 	g.LoadInit(config)
 
-	server := net.NewServer()
-	src.InitTimingWheel(server.GetContext())
+	s := net.NewServer()
+	src.InitTimingWheel(s.GetContext())
 
-	server.AddEvent(&Server.Event{})
-	server.AddProtocol(&src.Protocol{})
+	s.AddEvent(&server.Event{})
+	s.AddProtocol(&src.Protocol{})
 
 	ip := utils.GlobalConfig.GetString("Ip")
 	port := utils.GlobalConfig.GetInt("Port")
 
 	//启动http
 	//http使用tcp连接上来,然后由这个转发给各个agent
-	go httpServer(server.GetContext(), server)
+	go httpServer(s.GetContext(), s)
 
-	server.Listen(ip, port)
+	s.Listen(ip, port)
 }

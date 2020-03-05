@@ -54,7 +54,7 @@ func (r RedisService) GetPid() int {
 	return pid
 }
 func (r RedisService) Start() error {
-	if r.GetPid() > 0 {
+	if r.Status() {
 		return errors.New("redis已经运行")
 	}
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./pid")
