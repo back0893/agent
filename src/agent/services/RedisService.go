@@ -1,15 +1,13 @@
 package services
 
 import (
+	"agent/src"
 	"bufio"
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/gomodule/redigo/redis"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"strconv"
 	"syscall"
 )
 
@@ -17,44 +15,15 @@ type RedisService struct {
 }
 
 func (r RedisService) Status() bool {
-	pid := r.GetPid()
-	if pid == 0 {
-		return false
-	}
-	cmd := exec.Command("bash", "-c", fmt.Sprintf("ps -p %d |grep -v \"PID TTY\"|wc -l", pid))
-	out, err := cmd.Output()
-	if err != nil {
-		return false
-	}
-	out = bytes.Trim(out, "\r\n")
-	wc, _ := strconv.Atoi(string(out))
-	if wc > 0 {
-		return true
-	}
-	return false
+	return src.Status(src.ReadPid("./pid"))
 }
 
 func NewRedisService() *RedisService {
 	return &RedisService{}
 }
 
-func (r RedisService) GetPid() int {
-	file, err := os.Open("./pid")
-	if err != nil {
-		return 0
-	}
-	data, err := ioutil.ReadAll(file)
-	if err != nil {
-		return 0
-	}
-	pid, err := strconv.Atoi(string(bytes.Trim(data, "\n\r")))
-	if err != nil {
-		return 0
-	}
-	return pid
-}
 func (r RedisService) Start() error {
-	if r.Status() {
+	if src.Status(src.ReadPid("./pid")) {
 		return errors.New("redis已经运行")
 	}
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./pid")
@@ -62,7 +31,7 @@ func (r RedisService) Start() error {
 }
 
 func (r RedisService) Stop() error {
-	pid := r.GetPid()
+	pid := src.ReadPid("./pid")
 	if pid == 0 {
 		return errors.New("redis灭有在运行")
 	}

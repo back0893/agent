@@ -3,6 +3,7 @@ package src
 import (
 	"container/heap"
 	"context"
+	"log"
 	"sync"
 	"time"
 )
@@ -23,6 +24,10 @@ func GetTimingWheel() *TimingWheel {
 	return timingWheel
 }
 func InitTimingWheel(ctx context.Context) {
+	if timingWheel != nil {
+		log.Println("全局定时器已经启动,请不要重复启动")
+		return
+	}
 	timingWheel = NewTimingWheel(ctx)
 	go timingWheel.Start()
 }

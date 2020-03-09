@@ -2,15 +2,19 @@ package agent
 
 import (
 	"agent/src"
+	"agent/src/agent/cron"
 	"agent/src/agent/services"
 	"agent/src/g"
 	"context"
 	"fmt"
 	"github.com/back0893/goTcp/iface"
 	net2 "github.com/back0893/goTcp/net"
+	"github.com/back0893/goTcp/utils"
 	"log"
-	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -113,6 +117,13 @@ func (a *Agent) RunTask() {
 		}
 	}()
 }
+func (a *Agent) Wait() {
+	log.Println("接受停止或者ctrl-c停止")
+	chSign := make(chan os.Signal)
+	signal.Notify(chSign, syscall.SIGINT, syscall.SIGTERM)
+	log.Println("接受到信号:", <-chSign)
+	a.Stop()
+}
 
 /**
 重新连接服务器
@@ -124,6 +135,7 @@ func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
 	if a.IsStop() {
 		return
 	}
+	//这个recon同时间只能执行一直
 	id = src.AddTimer(5*time.Second, func() {
 		if a.IsStop() {
 			src.GetTimingWheel().Cancel(id)
@@ -141,7 +153,11 @@ func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
 	})
 }
 
-func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol, cfg string) *Agent {
+func NewAgent(cfg string) (*Agent, error) {
+	con, err := ConnectServer(cfg)
+	if err != nil {
+		return nil, err
+	}
 	agent := &Agent{
 		isStop:    src.NewAtomicInt64(0),
 		conEvent:  net2.NewEventWatch(),
@@ -149,11 +165,23 @@ func NewAgent(con *net.TCPConn, event iface.IEvent, protocol iface.IProtocol, cf
 		taskQueue: src.NewTaskQueue(),
 		cfg:       cfg,
 	}
-	agent.AddProtocol(protocol)
-	agent.AddEvent(event)
+
 	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), g.AGENT, agent))
+	agent.AddProtocol(src.Protocol{})
+	agent.AddEvent(Event{})
+
+	//断线重连
+	agent.AddClose(agent.ReCon)
+
+	src.InitTimingWheel(agent.GetContext())
+
+	//心跳单独实现.
+	headrtBeat := utils.GlobalConfig.GetInt("heartBeat")
+	src.AddTimer(time.Second*time.Duration(headrtBeat), func() {
+		cron.SendHeart(agent.GetCon())
+	})
 
 	agent.con = net2.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 
-	return agent
+	return agent, nil
 }

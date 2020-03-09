@@ -10,83 +10,68 @@ package main
 import (
 	"agent/src"
 	"agent/src/agent"
-	"agent/src/agent/cron"
-	"bytes"
 	"flag"
-	"github.com/back0893/goTcp/utils"
-	"io"
-	"io/ioutil"
-	"log"
+	"fmt"
 	"os"
-	"os/signal"
-	"strconv"
 	"syscall"
-	"time"
 )
 
-func recordPid(pidfile string) {
-	pid := os.Getpid()
-	file, _ := os.Create(pidfile)
-	defer file.Close()
-	io.WriteString(file, strconv.Itoa(pid))
-}
 func selfStart(cfg string) {
-	con, err := agent.ConnectServer(cfg)
+	updater, err := agent.NewAgent(cfg)
 	if err != nil {
 		panic(err)
 	}
-	updater := agent.NewAgent(con, agent.Event{}, src.Protocol{}, cfg)
-	src.InitTimingWheel(updater.GetContext())
-	//断线重连
-	updater.AddClose(updater.ReCon)
-	//心跳单独实现.
-	heartBeat := utils.GlobalConfig.GetInt("heartBeat")
-	src.AddTimer(time.Second*time.Duration(heartBeat), func() {
-		cron.SendHeart(updater.GetCon())
-	})
-
-	src.InitTimingWheel(updater.GetContext())
+	src.SavePid("./pid")
 	updater.Start()
-
-	log.Println("接受停止或者ctrl-c停止")
-	chSign := make(chan os.Signal)
-	signal.Notify(chSign, syscall.SIGINT, syscall.SIGTERM)
-	log.Println("接受到信号:", <-chSign)
-	updater.Stop()
+	updater.Wait()
 }
+
 func stop(name string) {
 	//todo 应该直接执行对应的agent的可执行文件
-	file, _ := os.Open("./pid.pid")
-	data, _ := ioutil.ReadAll(file)
-	data = bytes.Trim(data, "\r\n")
-	pid, _ := strconv.Atoi(string(data))
-	syscall.Kill(pid, syscall.SIGKILL)
+	pid := src.ReadPid("./pid")
+	_ = syscall.Kill(pid, syscall.SIGKILL)
 }
+
 func start(name, cfg string) {
 	//todo 应该直接执行对应的agent的可执行文件
-	recordPid("./pid.pid")
 	selfStart(cfg)
 }
 func update(name string) {
+	//todo 请求更新的配置,下载,替换
 	os.Rename("./update", "./update.old")
 	os.Rename("./update.new", "./update")
 }
+func status(name string) {
+	isRun := src.Status(src.ReadPid("./pid"))
+	str := ""
+	if isRun {
+		str = fmt.Sprintf("%s正在运行", name)
+	} else {
+		str = fmt.Sprintf("%s未运行", name)
+	}
+	fmt.Print(str)
+}
+
 func main() {
-	var status string
+	var action string
 	var agentName string
 	var cfg string
 	flag.StringVar(&cfg, "c", "./app.json", "加载的配置,只有start时才有用")
-	flag.StringVar(&status, "s", "start", "命令动作,start|stop|update")
-	flag.StringVar(&agentName, "u", "", "更新agent的名称")
+	flag.StringVar(&action, "t", "start", "命令动作,start|stop|update|check")
+	flag.StringVar(&agentName, "u", "", "操作的agent的名称,默认为自己")
 	flag.Parse()
 
-	switch status {
+	switch action {
 	case "start":
 		start(agentName, cfg)
 	case "stop":
 		stop(agentName)
 	case "update":
 		update(agentName)
-		//todo 更新完成后应该停止并且启动对应的agent
+	//todo 更新完成后应该停止并且启动对应的agent
+	case "status":
+		status(agentName)
+	case "check":
+		//从中心服务器下载最新的
 	}
 }
