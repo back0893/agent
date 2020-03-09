@@ -9,6 +9,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
 	"log"
@@ -18,7 +19,7 @@ var (
 	config string
 )
 
-func httpServer(ctx context.Context, server *net.Server) {
+func httpServer(ctx context.Context, server iface.IServer) {
 	host := utils.GlobalConfig.GetString("http.host")
 	port := utils.GlobalConfig.GetInt("http.port")
 	addr := fmt.Sprintf("%s:%d", host, port)

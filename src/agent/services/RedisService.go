@@ -1,7 +1,7 @@
 package services
 
 import (
-	"agent/src"
+	"agent/src/g"
 	"bufio"
 	"bytes"
 	"errors"
@@ -15,7 +15,7 @@ type RedisService struct {
 }
 
 func (r RedisService) Status() bool {
-	return src.Status(src.ReadPid("./pid"))
+	return g.Status(g.ReadPid("./pid"))
 }
 
 func NewRedisService() *RedisService {
@@ -23,7 +23,7 @@ func NewRedisService() *RedisService {
 }
 
 func (r RedisService) Start() error {
-	if src.Status(src.ReadPid("./pid")) {
+	if g.Status(g.ReadPid("./pid")) {
 		return errors.New("redis已经运行")
 	}
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./pid")
@@ -31,7 +31,7 @@ func (r RedisService) Start() error {
 }
 
 func (r RedisService) Stop() error {
-	pid := src.ReadPid("./pid")
+	pid := g.ReadPid("./pid")
 	if pid == 0 {
 		return errors.New("redis灭有在运行")
 	}

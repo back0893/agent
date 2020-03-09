@@ -6,7 +6,7 @@ import (
 	"agent/src/g"
 	"encoding/json"
 	"fmt"
-	"github.com/back0893/goTcp/net"
+	"github.com/back0893/goTcp/iface"
 	"io"
 	"net/http"
 )
@@ -21,7 +21,7 @@ type Action struct {
 /**
 为了使http处理人获得net.server的参数,有不想用全局变量
 */
-func WrapperSendTask(s *net.Server) func(http.ResponseWriter, *http.Request) {
+func WrapperSendTask(s iface.IServer) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		action := &Action{}
 		body := json.NewDecoder(request.Body)

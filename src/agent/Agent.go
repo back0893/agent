@@ -69,7 +69,7 @@ func (a *Agent) RunTask() {
 	//读取taskQueue,执行相应的操作
 	go func() {
 		for {
-			service := a.taskQueue.Pop()
+			service := a.taskQueue.Posop()
 			pkt := src.NewPkt()
 			pkt.Id = g.ServiceResponse
 			var str = "未知命令"

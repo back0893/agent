@@ -4,16 +4,24 @@ import (
 	"agent/src/agent/model"
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/back0893/goTcp/iface"
-	"github.com/back0893/goTcp/net"
+	"io"
+	"io/ioutil"
+	"net/http"
 	"os"
+	"os/exec"
+	"strconv"
+	"time"
 )
 
 func Mkdir(path string) error {
 	return os.Mkdir(path, 0755)
 }
 
-func GetCon(s *net.Server, username string) (con iface.IConnection, has bool) {
+func GetCon(s iface.IServer, username string) (con iface.IConnection, has bool) {
 	s.GetConnections().Range(func(key, value interface{}) bool {
 		con = value.(iface.IConnection)
 		data, ok := con.GetExtraData("auth")
@@ -46,4 +54,58 @@ func DecodeData(data []byte, e interface{}) error {
 		return err
 	}
 	return nil
+}
+
+func SavePid(pidfile string) {
+	pid := os.Getpid()
+	file, err := os.Create(pidfile)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	io.WriteString(file, strconv.Itoa(pid))
+}
+
+func ReadPid(pidfile string) int {
+	file, err := os.Open(pidfile)
+	if err != nil {
+		return 0
+	}
+	defer file.Close()
+	data, _ := ioutil.ReadAll(file)
+	data = bytes.Trim(data, "\r\n")
+	pid, _ := strconv.Atoi(string(data))
+	return pid
+}
+
+func Status(pid int) bool {
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("ps -p %d |grep -v \"PID TTY\"|wc -l", pid))
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	out = bytes.Trim(out, "\r\n")
+	wc, _ := strconv.Atoi(string(out))
+	if wc > 0 {
+		return true
+	}
+	return false
+}
+
+func Post(url string, data interface{}) ([]byte, error) {
+	client := http.Client{Timeout: time.Second * 5}
+	jsonStr, _ := json.Marshal(data)
+	resp, err := client.Post(url, "application/json", bytes.NewReader(jsonStr))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return nil, errors.New("请求返回非200")
+	}
+	result, _ := ioutil.ReadAll(resp.Body)
+	return result, nil
+}
+func Down(url, savePath string) {
+
 }
