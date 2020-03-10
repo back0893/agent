@@ -106,6 +106,26 @@ func Post(url string, data interface{}) ([]byte, error) {
 	result, _ := ioutil.ReadAll(resp.Body)
 	return result, nil
 }
-func Down(url, savePath string) {
 
+/**
+file 是一个绝对路径
+*/
+func Down(url, file string) error {
+	client := http.Client{Timeout: time.Second * 5}
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	fp, err := os.Create(file)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+	if _, err := io.Copy(fp, resp.Body); err != nil {
+		//出现错误,删除
+		os.Remove(file)
+		return err
+	}
+	return nil
 }

@@ -33,7 +33,9 @@ type Agent struct {
 func (a *Agent) GetCon() iface.IConnection {
 	return a.con
 }
-
+func (a *Agent) GetWaitGroup() *sync.WaitGroup {
+	return a.wg
+}
 func (a *Agent) GetContext() context.Context {
 	return a.ctx
 }
@@ -69,7 +71,7 @@ func (a *Agent) RunTask() {
 	//读取taskQueue,执行相应的操作
 	go func() {
 		for {
-			service := a.taskQueue.Posop()
+			service := a.taskQueue.Pop()
 			pkt := src.NewPkt()
 			pkt.Id = g.ServiceResponse
 			var str = "未知命令"

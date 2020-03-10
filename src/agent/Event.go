@@ -30,7 +30,8 @@ func (a Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 
 func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*src.Packet)
-	if pkt.Id == g.Service {
+	switch pkt.Id {
+	case g.Service:
 		service := &model.Service{}
 		if err := g.DecodeData(pkt.Data, service); err == nil {
 			agent := ctx.Value(g.AGENT).(*Agent)
@@ -39,8 +40,31 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 			//todo 发送的消息不合规
 			fmt.Println("发送的消息不合规")
 		}
+	case g.STOP:
+		pkt := src.NewPkt()
+		pkt.Id = g.Response
+		connection.Write(pkt)
 
-	} else {
+		agent := ctx.Value(g.AGENT).(*Agent)
+		agent.Stop()
+
+	case g.UPDATE:
+		agent := ctx.Value(g.AGENT).(*Agent)
+		info := &model.UpdateInfo{}
+		_ = g.DecodeData(pkt.Data, info)
+		go func(agent *Agent) {
+			update := NewUpdate()
+			if err := update.Do(info); err == nil {
+				agent.Stop()
+			}
+		}(agent)
+
+		pkt := src.NewPkt()
+		pkt.Id = g.Response
+		connection.Write(pkt)
+	case g.STATUS:
+		//todo 状态报告..
+	default:
 		log.Println("接受的回应id=>", pkt.Id)
 	}
 }
