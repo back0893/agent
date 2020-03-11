@@ -25,7 +25,10 @@ func httpServer(ctx context.Context, server iface.IServer) {
 	addr := fmt.Sprintf("%s:%d", host, port)
 	log.Printf("启动http服务器:%s", addr)
 	s := http.NewServer(addr)
-	s.AddHandler("/", handler.WrapperSendTask(server))
+
+	s.AddHandler("/sendTask", handler.WrapperSendTask(server))
+	s.AddHandler("/update", handler.WrapperUpdate(server))
+
 	go func() {
 		if err := s.Run(); err != nil {
 			panic(err)

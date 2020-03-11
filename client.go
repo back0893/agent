@@ -6,6 +6,7 @@ import (
 	"agent/src/agent/cron"
 	"agent/src/g"
 	"flag"
+	"github.com/back0893/goTcp/utils"
 	"os"
 	"syscall"
 	"time"
@@ -17,10 +18,10 @@ func start(cfg string) {
 		panic(err)
 	}
 	src.AddTimer(time.Second*5, func() {
-		cron.SendMem(agentClient.GetCon())
-		cron.SendPort(agentClient.GetCon())
-		cron.SendCPU(agentClient.GetCon())
-		cron.SendHHD(agentClient.GetCon())
+		//cron.SendMem(agentClient.GetCon())
+		//cron.SendPort(agentClient.GetCon())
+		//cron.SendCPU(agentClient.GetCon())
+		//cron.SendHHD(agentClient.GetCon())
 		cron.SendLoadAvg(agentClient.GetCon())
 	})
 	go agentClient.RunTask()
@@ -43,8 +44,9 @@ func main() {
 	var action string
 	var cfg string
 	flag.StringVar(&cfg, "c", "./app.json", "加载的配置,只有start时才有用")
-	flag.StringVar(&action, "t", "start", "命令动作,start|stop|update")
+	flag.StringVar(&action, "t", "start", "命令动作,start|stop|update|version")
 	flag.Parse()
+	utils.GlobalConfig.Set("filename", os.Args[0])
 
 	switch action {
 	case "start":

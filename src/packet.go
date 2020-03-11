@@ -1,7 +1,6 @@
 package src
 
 import (
-	"agent/src/agent/model"
 	"agent/src/g"
 	"bytes"
 	"encoding/binary"
@@ -63,9 +62,9 @@ func ComResponse() iface.IPacket {
 	pkt.Id = g.Response
 	return pkt
 }
-func ServicePkt(service *model.Service) iface.IPacket {
+func ServicePkt(data interface{}) iface.IPacket {
 	pkt := NewPkt()
 	pkt.Id = g.Service
-	pkt.Data, _ = g.EncodeData(service)
+	pkt.Data, _ = g.EncodeData(data)
 	return pkt
 }

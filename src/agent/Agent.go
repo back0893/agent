@@ -61,10 +61,13 @@ func (a *Agent) IsStop() bool {
 	return a.isStop.Get() == 1
 }
 func (a *Agent) Stop() {
-	if a.IsStop() {
+	if !a.IsStop() {
 		a.isStop.Store(1)
 		a.ctxCancel()
+		log.Println("stop wait")
 		a.wg.Wait()
+		log.Println("stop ok")
+		os.Exit(2)
 	}
 }
 func (a *Agent) RunTask() {

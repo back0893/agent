@@ -30,6 +30,7 @@ func (a Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 
 func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*src.Packet)
+	log.Println(pkt.Id)
 	switch pkt.Id {
 	case g.Service:
 		service := &model.Service{}
@@ -52,10 +53,14 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 		agent := ctx.Value(g.AGENT).(*Agent)
 		info := &model.UpdateInfo{}
 		_ = g.DecodeData(pkt.Data, info)
+		log.Println("update", info)
 		go func(agent *Agent) {
-			update := NewUpdate()
+			update := NewUpdate(utils.GlobalConfig.GetString("filename"))
 			if err := update.Do(info); err == nil {
+				log.Println("update ok")
 				agent.Stop()
+			} else {
+				log.Println(err)
 			}
 		}(agent)
 
