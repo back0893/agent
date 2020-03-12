@@ -157,7 +157,6 @@ func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
 		src.GetTimingWheel().Cancel(id)
 	})
 }
-
 func NewAgent(cfg string) (*Agent, error) {
 	con, err := ConnectServer(cfg)
 	if err != nil {
@@ -181,8 +180,8 @@ func NewAgent(cfg string) (*Agent, error) {
 	src.InitTimingWheel(agent.GetContext())
 
 	//心跳单独实现.
-	headrtBeat := utils.GlobalConfig.GetInt("heartBeat")
-	src.AddTimer(time.Second*time.Duration(headrtBeat), func() {
+	heartBeat := utils.GlobalConfig.GetInt("heartBeat")
+	src.AddTimer(time.Second*time.Duration(heartBeat), func() {
 		cron.SendHeart(agent.GetCon())
 	})
 

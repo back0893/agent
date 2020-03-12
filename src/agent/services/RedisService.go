@@ -15,7 +15,7 @@ type RedisService struct {
 }
 
 func (r RedisService) Status() bool {
-	return g.Status(g.ReadPid("./pid"))
+	return g.Status(g.ReadPid("./redisPid"))
 }
 
 func NewRedisService() *RedisService {
@@ -23,21 +23,21 @@ func NewRedisService() *RedisService {
 }
 
 func (r RedisService) Start() error {
-	if g.Status(g.ReadPid("./pid")) {
+	if g.Status(g.ReadPid("./redisPid")) {
 		return errors.New("redis已经运行")
 	}
-	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./pid")
+	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./redisPid")
 	return cmd.Run()
 }
 
 func (r RedisService) Stop() error {
-	pid := g.ReadPid("./pid")
+	pid := g.ReadPid("./redisPid")
 	if pid == 0 {
 		return errors.New("redis灭有在运行")
 	}
 	syscall.Kill(pid, syscall.SIGKILL)
 	//参数pid
-	os.Remove("./pid")
+	os.Remove("./redisPid")
 	return nil
 }
 

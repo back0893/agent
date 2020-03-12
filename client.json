@@ -3,6 +3,5 @@
   "port": 8001,
   "username": "agent1",
   "password": "123456",
-  "heartBeat": "10",
-  "listenPort": [80,10086]
+  "heartBeat": "10"
 }

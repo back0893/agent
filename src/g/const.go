@@ -3,10 +3,8 @@ package g
 const (
 	HeaderLength = 21 //包的固定长度
 	PING         = 1  //心跳
-	START        = 2  //启动
-	STOP         = 3  //停止
-	STATUS       = 4  //状态
-	UPDATE       = 5  //更新
+	STOP         = 2  //停止
+	UPDATE       = 3  //更新
 	Response     = 99 //通用回应
 
 	Auth       = 100 //身份识别

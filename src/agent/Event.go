@@ -32,7 +32,9 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 	pkt := packet.(*src.Packet)
 	log.Println(pkt.Id)
 	switch pkt.Id {
+
 	case g.Service:
+		//服务状态
 		service := &model.Service{}
 		if err := g.DecodeData(pkt.Data, service); err == nil {
 			agent := ctx.Value(g.AGENT).(*Agent)
@@ -41,7 +43,9 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 			//todo 发送的消息不合规
 			fmt.Println("发送的消息不合规")
 		}
+
 	case g.STOP:
+		//停止
 		pkt := src.NewPkt()
 		pkt.Id = g.Response
 		connection.Write(pkt)
@@ -50,6 +54,7 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 		agent.Stop()
 
 	case g.UPDATE:
+		//更新
 		agent := ctx.Value(g.AGENT).(*Agent)
 		info := &model.UpdateInfo{}
 		_ = g.DecodeData(pkt.Data, info)
@@ -63,12 +68,9 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 				log.Println(err)
 			}
 		}(agent)
-
 		pkt := src.NewPkt()
 		pkt.Id = g.Response
 		connection.Write(pkt)
-	case g.STATUS:
-		//todo 状态报告..
 	default:
 		log.Println("接受的回应id=>", pkt.Id)
 	}
