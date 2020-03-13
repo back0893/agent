@@ -40,6 +40,9 @@ func TimerAt(when time.Time, fn func()) int64 {
 func init() {
 	timersId = NewAtomicInt64(0)
 }
+func CancelTimer(id int64) {
+	timingWheel.Cancel(id)
+}
 
 /**
 定时器需要依据时间从近到远被排列

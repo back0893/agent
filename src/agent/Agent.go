@@ -2,14 +2,13 @@ package agent
 
 import (
 	"agent/src"
-	"agent/src/agent/cron"
+	iface2 "agent/src/agent/iface"
+	"agent/src/agent/model"
 	"agent/src/agent/services"
 	"agent/src/g"
 	"context"
-	"fmt"
 	"github.com/back0893/goTcp/iface"
 	net2 "github.com/back0893/goTcp/net"
-	"github.com/back0893/goTcp/utils"
 	"log"
 	"os"
 	"os/signal"
@@ -73,53 +72,25 @@ func (a *Agent) Stop() {
 func (a *Agent) RunTask() {
 	//读取taskQueue,执行相应的操作
 	go func() {
+		var service iface2.IService
+		var task *model.Service
 		for {
-			service := a.taskQueue.Pop()
-			pkt := src.NewPkt()
-			pkt.Id = g.ServiceResponse
-			var str = "未知命令"
-			switch service.Service {
+			task = a.taskQueue.Pop()
+			switch task.Service {
 			case "redis":
-				redis := services.NewRedisService()
-				switch service.Action {
-				case "start":
-					err := redis.Start()
-					if err != nil {
-						str = "redis启动失败"
-					} else {
-						str = "redis启动成功"
-					}
-				case "stop":
-					err := redis.Stop()
-					if err != nil {
-						str = "redis停止失败"
-					} else {
-						str = "redis停止成功"
-					}
-				case "status":
-					status := redis.Status()
-					if status {
-						str = "redis正在运行"
-					} else {
-						str = "redis没有运行"
-					}
-				case "restart":
-					err := redis.Restart()
-					if err != nil {
-						str = "redis重启失败"
-					} else {
-						str = "redis重启成功"
-					}
-				}
+				service = services.NewRedisService(a)
+			case "heart":
+				service = services.NewHeartBeatService(a)
+			case "loadavg":
+				service = services.NewLoadAvgServiceService(a)
+			case "memory":
+				service = services.NewMemoryService(a)
 			default:
+				continue
 			}
-			fmt.Println(str)
-			pkt.Data = []byte(str)
-			err := a.con.Write(pkt)
-			if err != nil {
-				//todo 发送失败..应该有后续操作
-			}
+			service.Action(task.Action, task.Args)
 		}
+
 	}()
 }
 func (a *Agent) Wait() {
@@ -157,6 +128,7 @@ func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
 		src.GetTimingWheel().Cancel(id)
 	})
 }
+
 func NewAgent(cfg string) (*Agent, error) {
 	con, err := ConnectServer(cfg)
 	if err != nil {
@@ -178,12 +150,6 @@ func NewAgent(cfg string) (*Agent, error) {
 	agent.AddClose(agent.ReCon)
 
 	src.InitTimingWheel(agent.GetContext())
-
-	//心跳单独实现.
-	heartBeat := utils.GlobalConfig.GetInt("heartBeat")
-	src.AddTimer(time.Second*time.Duration(heartBeat), func() {
-		cron.SendHeart(agent.GetCon())
-	})
 
 	agent.con = net2.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 

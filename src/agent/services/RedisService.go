@@ -1,28 +1,28 @@
 package services
 
 import (
+	"agent/src"
+	"agent/src/agent/iface"
 	"agent/src/g"
-	"bufio"
-	"bytes"
 	"errors"
-	"github.com/gomodule/redigo/redis"
 	"os"
 	"os/exec"
 	"syscall"
 )
 
 type RedisService struct {
+	agent iface.IAgent
 }
 
-func (r RedisService) Status() bool {
+func (r RedisService) Status([]string) bool {
 	return g.Status(g.ReadPid("./redisPid"))
 }
 
-func NewRedisService() *RedisService {
-	return &RedisService{}
+func NewRedisService(agent iface.IAgent) *RedisService {
+	return &RedisService{agent: agent}
 }
 
-func (r RedisService) Start() error {
+func (r RedisService) Start([]string) error {
 	if g.Status(g.ReadPid("./redisPid")) {
 		return errors.New("redis已经运行")
 	}
@@ -30,7 +30,7 @@ func (r RedisService) Start() error {
 	return cmd.Run()
 }
 
-func (r RedisService) Stop() error {
+func (r RedisService) Stop([]string) error {
 	pid := g.ReadPid("./redisPid")
 	if pid == 0 {
 		return errors.New("redis灭有在运行")
@@ -41,47 +41,53 @@ func (r RedisService) Stop() error {
 	return nil
 }
 
-func (r RedisService) Restart() error {
-	if err := r.Stop(); err != nil {
+func (r RedisService) Restart(args []string) error {
+	if err := r.Stop(args); err != nil {
 		return err
 	}
-	if err := r.Start(); err != nil {
+	if err := r.Start(args); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *RedisService) info(address string, auth string) (map[string]string, error) {
-	c, err := redis.Dial("tcp", address)
-	if err != nil {
-		return nil, errors.New("redis连接失败")
-	}
-	defer c.Close()
-
-	if auth != "" {
-		if _, err = c.Do("auth", auth); err != nil {
-			return nil, errors.New("redis密码错误")
+func (r RedisService) Action(action string, args []string) {
+	var str = "未知命令"
+	switch action {
+	case "start":
+		err := r.Start(args)
+		if err != nil {
+			str = "redis启动失败"
+		} else {
+			str = "redis启动成功"
+		}
+	case "stop":
+		err := r.Stop(args)
+		if err != nil {
+			str = "redis停止失败"
+		} else {
+			str = "redis停止成功"
+		}
+	case "status":
+		status := r.Status(args)
+		if status {
+			str = "redis正在运行"
+		} else {
+			str = "redis没有运行"
+		}
+	case "restart":
+		err := r.Restart(args)
+		if err != nil {
+			str = "redis重启失败"
+		} else {
+			str = "redis重启成功"
 		}
 	}
-	_, err = c.Do("ping")
+	pkt := src.NewPkt()
+	pkt.Id = g.ServiceResponse
+	pkt.Data = []byte(str)
+	err := r.agent.GetCon().Write(pkt)
 	if err != nil {
-		return nil, err
+		//todo 发送失败..应该有后续操作
 	}
-	info, err := c.Do("info")
-	if err != nil {
-		return nil, err
-	}
-	reader := bytes.NewReader(info.([]byte))
-	scaner := bufio.NewScanner(reader)
-	scaner.Split(bufio.ScanLines)
-	infoMap := make(map[string]string)
-	for scaner.Scan() {
-		line := scaner.Bytes()
-		p := bytes.Split(line, []byte{':'})
-		if len(p) != 2 {
-			continue
-		}
-		infoMap[string(p[0])] = string(p[1])
-	}
-	return infoMap, nil
 }

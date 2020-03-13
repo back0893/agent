@@ -1,15 +1,12 @@
 package main
 
 import (
-	"agent/src"
 	"agent/src/agent"
-	"agent/src/agent/cron"
 	"agent/src/g"
 	"flag"
 	"github.com/back0893/goTcp/utils"
 	"os"
 	"syscall"
-	"time"
 )
 
 func start(cfg string) {
@@ -17,14 +14,6 @@ func start(cfg string) {
 	if err != nil {
 		panic(err)
 	}
-	src.AddTimer(time.Second*5, func() {
-		//todo 将基础信息上班规整层一个服务
-		cron.SendMem(agentClient.GetCon())
-		//cron.SendPort(agentClient.GetCon())
-		//cron.SendCPU(agentClient.GetCon())
-		//cron.SendHHD(agentClient.GetCon())
-		//cron.SendLoadAvg(agentClient.GetCon())
-	})
 	go agentClient.RunTask()
 	agentClient.Start()
 	g.SavePid("./pid")
