@@ -14,7 +14,7 @@ type RedisService struct {
 	agent iface.IAgent
 }
 
-func (r RedisService) Status([]string) bool {
+func (r RedisService) Status(map[string]string) bool {
 	return g.Status(g.ReadPid("./redisPid"))
 }
 
@@ -22,7 +22,7 @@ func NewRedisService(agent iface.IAgent) *RedisService {
 	return &RedisService{agent: agent}
 }
 
-func (r RedisService) Start([]string) error {
+func (r RedisService) Start(map[string]string) error {
 	if g.Status(g.ReadPid("./redisPid")) {
 		return errors.New("redis已经运行")
 	}
@@ -30,7 +30,7 @@ func (r RedisService) Start([]string) error {
 	return cmd.Run()
 }
 
-func (r RedisService) Stop([]string) error {
+func (r RedisService) Stop(map[string]string) error {
 	pid := g.ReadPid("./redisPid")
 	if pid == 0 {
 		return errors.New("redis灭有在运行")
@@ -41,7 +41,7 @@ func (r RedisService) Stop([]string) error {
 	return nil
 }
 
-func (r RedisService) Restart(args []string) error {
+func (r RedisService) Restart(args map[string]string) error {
 	if err := r.Stop(args); err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (r RedisService) Restart(args []string) error {
 	return nil
 }
 
-func (r RedisService) Action(action string, args []string) {
+func (r RedisService) Action(action string, args map[string]string) {
 	var str = "未知命令"
 	switch action {
 	case "start":

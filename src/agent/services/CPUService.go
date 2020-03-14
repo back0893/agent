@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -21,7 +22,7 @@ func NewCPUService(agent iface.IAgent) *CPUService {
 	return &CPUService{agent: agent}
 }
 
-func (m *CPUService) Action(action string, args []string) {
+func (m *CPUService) Action(action string, args map[string]string) {
 	switch action {
 	case "start":
 		m.Start(args)
@@ -41,10 +42,13 @@ func (m *CPUService) Action(action string, args []string) {
 	}
 }
 
-func (m CPUService) Start(args []string) error {
+func (m CPUService) Start(args map[string]string) error {
+	if m.Status(args) {
+		return errors.New("service已经启动")
+	}
 	var num = 60
 	if len(args) > 0 {
-		n, err := strconv.Atoi(args[0])
+		n, err := strconv.Atoi(args["interval"])
 		if err == nil {
 			num = n
 		}
@@ -80,14 +84,14 @@ func (m CPUService) Start(args []string) error {
 	return nil
 }
 
-func (m CPUService) Stop([]string) error {
+func (m CPUService) Stop(map[string]string) error {
 	if cpuId > 0 {
 		src.CancelTimer(cpuId)
 	}
 	return nil
 }
 
-func (m CPUService) Restart(args []string) error {
+func (m CPUService) Restart(args map[string]string) error {
 	if err := m.Stop(args); err != nil {
 		return err
 	}
@@ -97,7 +101,7 @@ func (m CPUService) Restart(args []string) error {
 	return nil
 }
 
-func (m CPUService) Status([]string) bool {
+func (m CPUService) Status(map[string]string) bool {
 	if cpuId > 0 {
 		return true
 	}

@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -20,7 +21,7 @@ type LoadAvgServiceService struct {
 func NewLoadAvgServiceService(agent iface.IAgent) *HHDService {
 	return &HHDService{agent: agent}
 }
-func (m *LoadAvgServiceService) Action(action string, args []string) {
+func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 	switch action {
 	case "start":
 		m.Start(args)
@@ -40,10 +41,13 @@ func (m *LoadAvgServiceService) Action(action string, args []string) {
 	}
 }
 
-func (m LoadAvgServiceService) Start(args []string) error {
+func (m LoadAvgServiceService) Start(args map[string]string) error {
+	if m.Status(args) {
+		return errors.New("service已经启动")
+	}
 	var num = 60
 	if len(args) > 0 {
-		n, err := strconv.Atoi(args[0])
+		n, err := strconv.Atoi(args["interval"])
 		if err == nil {
 			num = n
 		}
@@ -71,14 +75,14 @@ func (m LoadAvgServiceService) Start(args []string) error {
 	return nil
 }
 
-func (m LoadAvgServiceService) Stop([]string) error {
+func (m LoadAvgServiceService) Stop(map[string]string) error {
 	if loadId > 0 {
 		src.CancelTimer(loadId)
 	}
 	return nil
 }
 
-func (m LoadAvgServiceService) Restart(args []string) error {
+func (m LoadAvgServiceService) Restart(args map[string]string) error {
 	if err := m.Stop(args); err != nil {
 		return err
 	}
@@ -88,7 +92,7 @@ func (m LoadAvgServiceService) Restart(args []string) error {
 	return nil
 }
 
-func (m LoadAvgServiceService) Status([]string) bool {
+func (m LoadAvgServiceService) Status(map[string]string) bool {
 	if loadId > 0 {
 		return true
 	}

@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -21,7 +22,7 @@ func NewMemoryService(agent iface.IAgent) *MemoryService {
 	return &MemoryService{agent: agent}
 }
 
-func (m *MemoryService) Action(action string, args []string) {
+func (m *MemoryService) Action(action string, args map[string]string) {
 	switch action {
 	case "start":
 		m.Start(args)
@@ -41,10 +42,13 @@ func (m *MemoryService) Action(action string, args []string) {
 	}
 }
 
-func (m MemoryService) Start(args []string) error {
+func (m MemoryService) Start(args map[string]string) error {
+	if m.Status(args) {
+		return errors.New("service已经启动")
+	}
 	var num = 60
 	if len(args) > 0 {
-		n, err := strconv.Atoi(args[0])
+		n, err := strconv.Atoi(args["interval"])
 		if err == nil {
 			num = n
 		}
@@ -72,14 +76,14 @@ func (m MemoryService) Start(args []string) error {
 	return nil
 }
 
-func (m MemoryService) Stop([]string) error {
+func (m MemoryService) Stop(map[string]string) error {
 	if memId > 0 {
 		src.CancelTimer(memId)
 	}
 	return nil
 }
 
-func (m MemoryService) Restart(args []string) error {
+func (m MemoryService) Restart(args map[string]string) error {
 	if err := m.Stop(args); err != nil {
 		return err
 	}
@@ -89,7 +93,7 @@ func (m MemoryService) Restart(args []string) error {
 	return nil
 }
 
-func (m MemoryService) Status([]string) bool {
+func (m MemoryService) Status(map[string]string) bool {
 	if memId > 0 {
 		return true
 	}

@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"errors"
 	"log"
 	"strconv"
 	"strings"
@@ -21,7 +22,7 @@ type PortService struct {
 func NewPortService(agent iface.IAgent) *PortService {
 	return &PortService{agent: agent}
 }
-func (m *PortService) Action(action string, args []string) {
+func (m *PortService) Action(action string, args map[string]string) {
 	switch action {
 	case "start":
 		m.Start(args)
@@ -41,10 +42,13 @@ func (m *PortService) Action(action string, args []string) {
 	}
 }
 
-func (m PortService) Start(args []string) error {
+func (m PortService) Start(args map[string]string) error {
+	if m.Status(args) {
+		return errors.New("service已经启动")
+	}
 	var num = 60
 	if len(args) > 0 {
-		n, err := strconv.Atoi(args[0])
+		n, err := strconv.Atoi(args["interval"])
 		if err == nil {
 			num = n
 		}
@@ -52,7 +56,7 @@ func (m PortService) Start(args []string) error {
 	portId = src.AddTimer(time.Duration(num)*time.Second, func() {
 		//端口使用,分割
 		lp := make([]int64, 0)
-		for _, port := range strings.Split(args[1], ",") {
+		for _, port := range strings.Split(args["ports"], ",") {
 			p, err := strconv.ParseInt(port, 10, 64)
 			if err != nil {
 				continue
@@ -82,14 +86,14 @@ func (m PortService) Start(args []string) error {
 	return nil
 }
 
-func (m PortService) Stop([]string) error {
+func (m PortService) Stop(map[string]string) error {
 	if portId > 0 {
 		src.CancelTimer(portId)
 	}
 	return nil
 }
 
-func (m PortService) Restart(args []string) error {
+func (m PortService) Restart(args map[string]string) error {
 	if err := m.Stop(args); err != nil {
 		return err
 	}
@@ -99,7 +103,7 @@ func (m PortService) Restart(args []string) error {
 	return nil
 }
 
-func (m PortService) Status([]string) bool {
+func (m PortService) Status(map[string]string) bool {
 	if portId > 0 {
 		return true
 	}

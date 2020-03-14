@@ -4,6 +4,7 @@ import (
 	"agent/src"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
@@ -21,7 +22,9 @@ func NewHeartBeatService(agent iface.IAgent) *HeartBeatService {
 	return &HeartBeatService{agent: agent}
 }
 
-func (m *HeartBeatService) Action(action string, args []string) {
+func (m *HeartBeatService) Action(action string, args map[string]string) {
+	pkt := src.NewPkt()
+	pkt.Id = g.ServiceResponse
 	switch action {
 	case "start":
 		m.Start(args)
@@ -32,8 +35,6 @@ func (m *HeartBeatService) Action(action string, args []string) {
 	case "status":
 		m.Status(args)
 	}
-	pkt := src.NewPkt()
-	pkt.Id = g.ServiceResponse
 	pkt.Data = []byte("!启动心跳!")
 	err := m.agent.GetCon().Write(pkt)
 	if err != nil {
@@ -41,10 +42,14 @@ func (m *HeartBeatService) Action(action string, args []string) {
 	}
 }
 
-func (m HeartBeatService) Start(args []string) error {
+func (m HeartBeatService) Start(args map[string]string) error {
+	//如果已经启动,,,不能重复启动
+	if m.Status(args) {
+		return errors.New("service已经启动")
+	}
 	var num = 10
 	if len(args) > 0 {
-		n, err := strconv.Atoi(args[0])
+		n, err := strconv.Atoi(args["interval"])
 		if err == nil {
 			num = n
 		}
@@ -61,14 +66,15 @@ func (m HeartBeatService) Start(args []string) error {
 	return nil
 }
 
-func (m HeartBeatService) Stop([]string) error {
+func (m HeartBeatService) Stop(map[string]string) error {
 	if heartId > 0 {
 		src.CancelTimer(heartId)
 	}
+	heartId = 0
 	return nil
 }
 
-func (m HeartBeatService) Restart(args []string) error {
+func (m HeartBeatService) Restart(args map[string]string) error {
 	if err := m.Stop(args); err != nil {
 		return err
 	}
@@ -78,7 +84,7 @@ func (m HeartBeatService) Restart(args []string) error {
 	return nil
 }
 
-func (m HeartBeatService) Status([]string) bool {
+func (m HeartBeatService) Status(map[string]string) bool {
 	if heartId > 0 {
 		return true
 	}

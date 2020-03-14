@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -76,7 +77,7 @@ func (a *Agent) RunTask() {
 		var task *model.Service
 		for {
 			task = a.taskQueue.Pop()
-			switch task.Service {
+			switch strings.ToLower(task.Service) {
 			case "redis":
 				service = services.NewRedisService(a)
 			case "heart":
@@ -85,6 +86,12 @@ func (a *Agent) RunTask() {
 				service = services.NewLoadAvgServiceService(a)
 			case "memory":
 				service = services.NewMemoryService(a)
+			case "hhd":
+				service = services.NewHHDService(a)
+			case "port":
+				service = services.NewPortService(a)
+			case "cpu":
+				service = services.NewCPUService(a)
 			default:
 				continue
 			}

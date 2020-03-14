@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"errors"
 	"log"
 	"strconv"
 	"time"
@@ -21,7 +22,7 @@ func NewHHDService(agent iface.IAgent) *HHDService {
 	return &HHDService{agent: agent}
 }
 
-func (m *HHDService) Action(action string, args []string) {
+func (m *HHDService) Action(action string, args map[string]string) {
 	switch action {
 	case "start":
 		m.Start(args)
@@ -41,10 +42,13 @@ func (m *HHDService) Action(action string, args []string) {
 	}
 }
 
-func (m HHDService) Start(args []string) error {
+func (m HHDService) Start(args map[string]string) error {
+	if m.Status(args) {
+		return errors.New("service已经启动")
+	}
 	var num = 60
 	if len(args) > 0 {
-		n, err := strconv.Atoi(args[0])
+		n, err := strconv.Atoi(args["interval"])
 		if err == nil {
 			num = n
 		}
@@ -72,14 +76,14 @@ func (m HHDService) Start(args []string) error {
 	return nil
 }
 
-func (m HHDService) Stop([]string) error {
+func (m HHDService) Stop(map[string]string) error {
 	if hhdId > 0 {
 		src.CancelTimer(hhdId)
 	}
 	return nil
 }
 
-func (m HHDService) Restart(args []string) error {
+func (m HHDService) Restart(args map[string]string) error {
 	if err := m.Stop(args); err != nil {
 		return err
 	}
@@ -89,7 +93,7 @@ func (m HHDService) Restart(args []string) error {
 	return nil
 }
 
-func (m HHDService) Status([]string) bool {
+func (m HHDService) Status(map[string]string) bool {
 	if hhdId > 0 {
 		return true
 	}
