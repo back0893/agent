@@ -4,6 +4,7 @@ import (
 	"agent/src/agent"
 	"agent/src/g"
 	"flag"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"os"
 	"syscall"
@@ -37,6 +38,8 @@ func main() {
 		start(cfg)
 	case "stop":
 		stop()
+	case "version":
+		fmt.Printf("当前版本:%d\n", g.VERSION)
 	default:
 		flag.Usage()
 	}

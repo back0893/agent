@@ -34,8 +34,8 @@ func NewUpdate(filename string) *UpdateCommand {
 
 func (uc *UpdateCommand) Do(Info *model.UpdateInfo) error {
 	//版本小于当前的版本号
-	//if Info.Version<utils.GlobalConfig.GetInt("Version"){
-	//	return nil
+	//if Info.Version<=g.VERSION{
+	//	return errors.New("不能回退版本")
 	//}
 	newFile := uc.GetNewFilename()
 	currentFile := uc.GetFilename()
