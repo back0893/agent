@@ -34,7 +34,7 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 	switch pkt.Id {
 
 	case g.Service:
-		//服务状态
+		//服务状态,服务被推动到消息队列中
 		service := &model.Service{}
 		if err := g.DecodeData(pkt.Data, service); err == nil {
 			agent := ctx.Value(g.AGENT).(*Agent)

@@ -11,7 +11,7 @@ import (
 	"net/http"
 )
 
-type Action struct {
+type action struct {
 	Agent   string            //发送给agent的名称
 	Service string            //发送的服务名称
 	Action  string            //服务对应的动作
@@ -23,7 +23,7 @@ type Action struct {
 */
 func WrapperSendTask(s iface.IServer) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
-		action := &Action{}
+		action := &action{}
 		body := json.NewDecoder(request.Body)
 		if err := body.Decode(&action); err != nil {
 			io.WriteString(writer, err.Error())
