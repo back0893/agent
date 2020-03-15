@@ -1,7 +1,7 @@
 package funcs
 
 import (
-	"agent/src/agent/model"
+	model2 "agent/src/g/model"
 	"errors"
 	"github.com/toolkits/nux"
 	"github.com/toolkits/slice"
@@ -11,7 +11,7 @@ import (
 net.port.listen 端口监听状态
 */
 
-func ListenTcpPortMetrics(ports ...int64) ([]*model.Port, error) {
+func ListenTcpPortMetrics(ports ...int64) ([]*model2.Port, error) {
 	if len(ports) == 0 {
 		return nil, errors.New("port empty")
 	}
@@ -23,7 +23,7 @@ func ListenTcpPortMetrics(ports ...int64) ([]*model.Port, error) {
 	return mvs, nil
 }
 
-func ListenUdpPortMetrics(ports ...int64) ([]*model.Port, error) {
+func ListenUdpPortMetrics(ports ...int64) ([]*model2.Port, error) {
 	if len(ports) == 0 {
 		return nil, errors.New("port empty")
 	}
@@ -35,10 +35,10 @@ func ListenUdpPortMetrics(ports ...int64) ([]*model.Port, error) {
 	return mvs, nil
 }
 
-func listenPort(metric string, ports []int64, listenPorts []int64) []*model.Port {
-	mvs := make([]*model.Port, 0, 10)
+func listenPort(metric string, ports []int64, listenPorts []int64) []*model2.Port {
+	mvs := make([]*model2.Port, 0, 10)
 	for _, port := range ports {
-		m := &model.Port{
+		m := &model2.Port{
 			Type:   metric,
 			Port:   port,
 			Listen: false,

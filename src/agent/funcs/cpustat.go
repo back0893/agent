@@ -1,7 +1,7 @@
 package funcs
 
 import (
-	"agent/src/agent/model"
+	model2 "agent/src/g/model"
 	"github.com/toolkits/nux"
 	"sync"
 )
@@ -53,9 +53,9 @@ func UpdateCpuStat() error {
 	return nil
 }
 
-func CpuMetrics() *model.Cpu {
+func CpuMetrics() *model2.Cpu {
 	cpuIdle := CpuIdle()
-	return &model.Cpu{
+	return &model2.Cpu{
 		Idle: cpuIdle,
 		Busy: 100 - cpuIdle,
 	}

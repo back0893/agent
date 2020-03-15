@@ -2,8 +2,8 @@ package agent
 
 import (
 	"agent/src"
-	"agent/src/agent/model"
 	"agent/src/g"
+	"agent/src/g/model"
 	"context"
 	"fmt"
 	"github.com/back0893/goTcp/iface"
@@ -71,6 +71,20 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 		pkt := src.NewPkt()
 		pkt.Id = g.Response
 		connection.Write(pkt)
+	case g.AuthSuccess:
+		//认真成功,主动请求,启动的services
+		pkt := src.NewPkt()
+		pkt.Id = g.Services
+		connection.Write(pkt)
+
+	case g.AuthFail:
+		//认真失败...
+	case g.ServicesList:
+		sl := model.NewServicesList()
+		for _, service := range sl.GetServices() {
+			agent := ctx.Value(g.AGENT).(*Agent)
+			agent.taskQueue.Push(service)
+		}
 	default:
 		log.Println("接受的回应id=>", pkt.Id)
 	}

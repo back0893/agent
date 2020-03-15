@@ -1,7 +1,7 @@
 package funcs
 
 import (
-	"agent/src/agent/model"
+	model2 "agent/src/g/model"
 	"github.com/toolkits/nux"
 )
 
@@ -11,7 +11,7 @@ mem.memtotal：内存总大小
 mem.memused：使用了多少内存
 */
 
-func MemMetrics() (*model.Memory, error) {
+func MemMetrics() (*model2.Memory, error) {
 	m, err := nux.MemInfo()
 	if err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func MemMetrics() (*model.Memory, error) {
 	if m.MemAvailable > 0 {
 		free = m.MemAvailable
 	}
-	return &model.Memory{
+	return &model2.Memory{
 		Total: m.MemTotal,
 		Used:  m.MemTotal - free,
 		Free:  free,

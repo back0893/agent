@@ -2,8 +2,8 @@ package server
 
 import (
 	"agent/src"
-	"agent/src/agent/model"
 	"agent/src/g"
+	"agent/src/g/model"
 	"context"
 	"fmt"
 	"github.com/back0893/goTcp/iface"

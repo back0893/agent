@@ -1,8 +1,8 @@
 package agent
 
 import (
-	"agent/src/agent/model"
 	"agent/src/g"
+	model2 "agent/src/g/model"
 	"fmt"
 	"os"
 )
@@ -32,7 +32,7 @@ func NewUpdate(filename string) *UpdateCommand {
 	}
 }
 
-func (uc *UpdateCommand) Do(Info *model.UpdateInfo) error {
+func (uc *UpdateCommand) Do(Info *model2.UpdateInfo) error {
 	//版本小于当前的版本号
 	//if Info.Version<=g.VERSION{
 	//	return errors.New("不能回退版本")

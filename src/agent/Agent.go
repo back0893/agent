@@ -3,9 +3,9 @@ package agent
 import (
 	"agent/src"
 	iface2 "agent/src/agent/iface"
-	"agent/src/agent/model"
 	"agent/src/agent/services"
 	"agent/src/g"
+	model2 "agent/src/g/model"
 	"context"
 	"github.com/back0893/goTcp/iface"
 	net2 "github.com/back0893/goTcp/net"
@@ -74,7 +74,7 @@ func (a *Agent) RunTask() {
 	//读取taskQueue,执行相应的操作
 	go func() {
 		var service iface2.IService
-		var task *model.Service
+		var task *model2.Service
 		for {
 			task = a.taskQueue.Pop()
 			switch strings.ToLower(task.Service) {

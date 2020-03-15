@@ -1,7 +1,7 @@
 package g
 
 import (
-	"agent/src/agent/model"
+	model2 "agent/src/g/model"
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
@@ -28,7 +28,7 @@ func GetCon(s iface.IServer, username string) (con iface.IConnection, has bool) 
 		if ok == false {
 			return true
 		}
-		auth := data.(*model.Auth)
+		auth := data.(*model2.Auth)
 		if auth.Username == username {
 			has = true
 			return false

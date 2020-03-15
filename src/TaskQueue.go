@@ -1,22 +1,22 @@
 package src
 
 import (
-	"agent/src/agent/model"
+	model2 "agent/src/g/model"
 	"sync"
 )
 
 type TaskQueue struct {
-	queue []*model.Service
+	queue []*model2.Service
 	cond  *sync.Cond
 }
 
 func NewTaskQueue() *TaskQueue {
 	return &TaskQueue{
-		queue: make([]*model.Service, 0),
+		queue: make([]*model2.Service, 0),
 		cond:  sync.NewCond(&sync.Mutex{}),
 	}
 }
-func (task *TaskQueue) Push(action *model.Service) {
+func (task *TaskQueue) Push(action *model2.Service) {
 	task.cond.L.Lock()
 	defer task.cond.L.Unlock()
 	task.queue = append(task.queue, action)
@@ -26,7 +26,7 @@ func (task *TaskQueue) Push(action *model.Service) {
 /**
 等待一直有值返回,如果请注意
 */
-func (task *TaskQueue) Pop() *model.Service {
+func (task *TaskQueue) Pop() *model2.Service {
 	task.cond.L.Lock()
 	defer task.cond.L.Unlock()
 	var n int
