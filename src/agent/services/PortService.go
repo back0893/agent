@@ -6,6 +6,7 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"errors"
+	"github.com/back0893/goTcp/utils"
 	"log"
 	"strconv"
 	"strings"
@@ -16,11 +17,10 @@ import (
 var portId int64
 
 type PortService struct {
-	agent iface.IAgent
 }
 
-func NewPortService(agent iface.IAgent) *PortService {
-	return &PortService{agent: agent}
+func NewPortService() *PortService {
+	return &PortService{}
 }
 func (m *PortService) Action(action string, args map[string]string) {
 	switch action {
@@ -36,7 +36,8 @@ func (m *PortService) Action(action string, args map[string]string) {
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
 	pkt.Data = []byte("启动memory")
-	err := m.agent.GetCon().Write(pkt)
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
 	if err != nil {
 		//todo 发送失败..应该有后续操作
 	}
@@ -77,7 +78,8 @@ func (m PortService) Start(args map[string]string) error {
 			log.Println(err)
 			return
 		}
-		err = m.agent.GetCon().Write(pkt)
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		err = a.GetCon().Write(pkt)
 		if err != nil {
 			log.Println(err)
 			return

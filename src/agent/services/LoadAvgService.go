@@ -6,6 +6,7 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"errors"
+	"github.com/back0893/goTcp/utils"
 	"log"
 	"strconv"
 	"time"
@@ -15,11 +16,10 @@ import (
 var loadId int64
 
 type LoadAvgServiceService struct {
-	agent iface.IAgent
 }
 
-func NewLoadAvgServiceService(agent iface.IAgent) *HHDService {
-	return &HHDService{agent: agent}
+func NewLoadAvgServiceService() *LoadAvgServiceService {
+	return &LoadAvgServiceService{}
 }
 func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 	switch action {
@@ -34,8 +34,9 @@ func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 	}
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
-	pkt.Data = []byte("启动memory")
-	err := m.agent.GetCon().Write(pkt)
+	pkt.Data = []byte("启动负载")
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
 	if err != nil {
 		//todo 发送失败..应该有后续操作
 	}
@@ -66,7 +67,8 @@ func (m LoadAvgServiceService) Start(args map[string]string) error {
 			log.Println(err)
 			return
 		}
-		err = m.agent.GetCon().Write(pkt)
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		err = a.GetCon().Write(pkt)
 		if err != nil {
 			log.Println(err)
 			return

@@ -6,6 +6,7 @@ import (
 	"agent/src/g"
 	"errors"
 	"fmt"
+	"github.com/back0893/goTcp/utils"
 	"log"
 	"strconv"
 	"time"
@@ -15,11 +16,10 @@ import (
 var heartId int64
 
 type HeartBeatService struct {
-	agent iface.IAgent
 }
 
-func NewHeartBeatService(agent iface.IAgent) *HeartBeatService {
-	return &HeartBeatService{agent: agent}
+func NewHeartBeatService() *HeartBeatService {
+	return &HeartBeatService{}
 }
 
 func (m *HeartBeatService) Action(action string, args map[string]string) {
@@ -36,7 +36,8 @@ func (m *HeartBeatService) Action(action string, args map[string]string) {
 		m.Status(args)
 	}
 	pkt.Data = []byte("!启动心跳!")
-	err := m.agent.GetCon().Write(pkt)
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
 	if err != nil {
 		//todo 发送失败..应该有后续操作
 	}
@@ -59,7 +60,8 @@ func (m HeartBeatService) Start(args map[string]string) error {
 		fmt.Println("ping")
 		pkt := src.NewPkt()
 		pkt.Id = g.PING
-		if err := m.agent.GetCon().Write(pkt); err != nil {
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		if err := a.GetCon().Write(pkt); err != nil {
 			log.Println(err)
 		}
 	})

@@ -15,7 +15,6 @@ func start(cfg string) {
 	if err != nil {
 		panic(err)
 	}
-	go agentClient.RunTask()
 	agentClient.Start()
 	g.SavePid("./pid")
 	agentClient.Wait()

@@ -1,6 +1,7 @@
 package g
 
 import (
+	"agent/src/agent"
 	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"github.com/spf13/cast"
@@ -11,13 +12,7 @@ import (
 )
 
 func runtimeDir() (string, error) {
-	var path string
-	p := utils.GlobalConfig.Get("runtime")
-	if p == nil {
-		path = "./runtime"
-	} else {
-		path = cast.ToString(p)
-	}
+	path := GetRuntimePath()
 	_, err := os.Stat(path)
 	if err != nil {
 		if os.IsExist(err) == false {
@@ -48,5 +43,19 @@ func setLogWrite() {
 }
 func LoadInit(file string) {
 	utils.GlobalConfig.Load("json", file)
+
+	l := agent.NewServicesList()
+	l.WakeUp()
+
 	setLogWrite()
+}
+func GetRuntimePath() string {
+	var path string
+	p := utils.GlobalConfig.Get("runtime")
+	if p == nil {
+		path = "./runtime"
+	} else {
+		path = cast.ToString(p)
+	}
+	return path
 }

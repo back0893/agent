@@ -17,7 +17,6 @@ type IAgent interface {
 	Start()
 	IsStop() bool
 	Stop()
-	RunTask()
 	Wait()
 	ReCon(ctx context.Context, con iface.IConnection)
 }

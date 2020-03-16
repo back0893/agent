@@ -2,17 +2,13 @@ package agent
 
 import (
 	"agent/src"
-	iface2 "agent/src/agent/iface"
-	"agent/src/agent/services"
 	"agent/src/g"
-	model2 "agent/src/g/model"
 	"context"
 	"github.com/back0893/goTcp/iface"
-	net2 "github.com/back0893/goTcp/net"
+	"github.com/back0893/goTcp/net"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -70,36 +66,6 @@ func (a *Agent) Stop() {
 		os.Exit(2)
 	}
 }
-func (a *Agent) RunTask() {
-	//读取taskQueue,执行相应的操作
-	go func() {
-		var service iface2.IService
-		var task *model2.Service
-		for {
-			task = a.taskQueue.Pop()
-			switch strings.ToLower(task.Service) {
-			case "redis":
-				service = services.NewRedisService(a)
-			case "heart":
-				service = services.NewHeartBeatService(a)
-			case "loadavg":
-				service = services.NewLoadAvgServiceService(a)
-			case "memory":
-				service = services.NewMemoryService(a)
-			case "hhd":
-				service = services.NewHHDService(a)
-			case "port":
-				service = services.NewPortService(a)
-			case "cpu":
-				service = services.NewCPUService(a)
-			default:
-				continue
-			}
-			service.Action(task.Action, task.Args)
-		}
-
-	}()
-}
 func (a *Agent) Wait() {
 	log.Println("接受停止或者ctrl-c停止")
 	chSign := make(chan os.Signal)
@@ -130,7 +96,7 @@ func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
 			log.Print("重新连接失败,等待下次连接")
 			return
 		}
-		a.con = net2.NewConn(a.ctx, con, a.wg, a.conEvent, a.protocol, 0)
+		a.con = net.NewConn(a.ctx, con, a.wg, a.conEvent, a.protocol, 0)
 		a.Start()
 		src.GetTimingWheel().Cancel(id)
 	})
@@ -142,11 +108,10 @@ func NewAgent(cfg string) (*Agent, error) {
 		return nil, err
 	}
 	agent := &Agent{
-		isStop:    src.NewAtomicInt64(0),
-		conEvent:  net2.NewEventWatch(),
-		wg:        &sync.WaitGroup{},
-		taskQueue: src.NewTaskQueue(),
-		cfg:       cfg,
+		isStop:   src.NewAtomicInt64(0),
+		conEvent: net.NewEventWatch(),
+		wg:       &sync.WaitGroup{},
+		cfg:      cfg,
 	}
 
 	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), g.AGENT, agent))
@@ -158,7 +123,7 @@ func NewAgent(cfg string) (*Agent, error) {
 
 	src.InitTimingWheel(agent.GetContext())
 
-	agent.con = net2.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
+	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 
 	return agent, nil
 }

@@ -5,21 +5,22 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"errors"
+	"github.com/back0893/goTcp/utils"
 	"os"
 	"os/exec"
 	"syscall"
 )
 
 type RedisService struct {
-	agent iface.IAgent
+	CurrentStatus string
 }
 
 func (r RedisService) Status(map[string]string) bool {
 	return g.Status(g.ReadPid("./redisPid"))
 }
 
-func NewRedisService(agent iface.IAgent) *RedisService {
-	return &RedisService{agent: agent}
+func NewRedisService() *RedisService {
+	return &RedisService{}
 }
 
 func (r RedisService) Start(map[string]string) error {
@@ -83,11 +84,21 @@ func (r RedisService) Action(action string, args map[string]string) {
 			str = "redis重启成功"
 		}
 	}
+	//无论怎么样,都会启动一个定时器,定时查询状态,以监控
+	go r.Watcher()
+
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
 	pkt.Data = []byte(str)
-	err := r.agent.GetCon().Write(pkt)
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
 	if err != nil {
 		//todo 发送失败..应该有后续操作
 	}
+}
+func (r *RedisService) Watcher() {
+	src.AddTimer(20, func() {
+		start := r.Status(nil)
+
+	})
 }

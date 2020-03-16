@@ -6,6 +6,7 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"errors"
+	"github.com/back0893/goTcp/utils"
 	"log"
 	"strconv"
 	"time"
@@ -15,11 +16,10 @@ import (
 var cpuId int64
 
 type CPUService struct {
-	agent iface.IAgent
 }
 
-func NewCPUService(agent iface.IAgent) *CPUService {
-	return &CPUService{agent: agent}
+func NewCPUService() *CPUService {
+	return &CPUService{}
 }
 
 func (m *CPUService) Action(action string, args map[string]string) {
@@ -36,7 +36,8 @@ func (m *CPUService) Action(action string, args map[string]string) {
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
 	pkt.Data = []byte("启动memory")
-	err := m.agent.GetCon().Write(pkt)
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
 	if err != nil {
 		//todo 发送失败..应该有后续操作
 	}
@@ -75,7 +76,8 @@ func (m CPUService) Start(args map[string]string) error {
 			log.Println(err)
 			return
 		}
-		err = m.agent.GetCon().Write(pkt)
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		err = a.GetCon().Write(pkt)
 		if err != nil {
 			log.Println(err)
 			return

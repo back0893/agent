@@ -1,7 +1,7 @@
 package g
 
 import (
-	model2 "agent/src/g/model"
+	"agent/src/g/model"
 	"bytes"
 	"encoding/gob"
 	"encoding/json"
@@ -20,7 +20,6 @@ import (
 func Mkdir(path string) error {
 	return os.Mkdir(path, 0755)
 }
-
 func GetCon(s iface.IServer, username string) (con iface.IConnection, has bool) {
 	s.GetConnections().Range(func(key, value interface{}) bool {
 		con = value.(iface.IConnection)
@@ -28,7 +27,7 @@ func GetCon(s iface.IServer, username string) (con iface.IConnection, has bool) 
 		if ok == false {
 			return true
 		}
-		auth := data.(*model2.Auth)
+		auth := data.(*model.Auth)
 		if auth.Username == username {
 			has = true
 			return false
