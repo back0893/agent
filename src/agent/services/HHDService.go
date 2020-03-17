@@ -5,21 +5,19 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	"errors"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
-	"strconv"
-	"time"
 )
 
-//一个私有的全局变量
-var hhdId int64
-
 type HHDService struct {
+	CurrentStatus string
 }
 
 func NewHHDService() *HHDService {
-	return &HHDService{}
+	return &HHDService{
+		CurrentStatus: "start",
+	}
 }
 
 func (m *HHDService) Action(action string, args map[string]string) {
@@ -43,45 +41,13 @@ func (m *HHDService) Action(action string, args map[string]string) {
 	}
 }
 
-func (m HHDService) Start(args map[string]string) error {
-	if m.Status(args) {
-		return errors.New("service已经启动")
-	}
-	var num = 60
-	if len(args) > 0 {
-		n, err := strconv.Atoi(args["interval"])
-		if err == nil {
-			num = n
-		}
-	}
-	hhdId = src.AddTimer(time.Duration(num)*time.Second, func() {
-		disks, err := funcs.DiskUseMetrics()
-		if err != nil {
-			//todo 获得内存失败咋个处理
-			log.Println(err)
-			return
-		}
-		pkt := src.NewPkt()
-		pkt.Id = g.HHD
-		pkt.Data, err = g.EncodeData(disks)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		err = a.GetCon().Write(pkt)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	})
+func (m *HHDService) Start(args map[string]string) error {
+	m.CurrentStatus = "start"
 	return nil
 }
 
-func (m HHDService) Stop(map[string]string) error {
-	if hhdId > 0 {
-		src.CancelTimer(hhdId)
-	}
+func (m *HHDService) Stop(map[string]string) error {
+	m.CurrentStatus = "stop"
 	return nil
 }
 
@@ -96,8 +62,38 @@ func (m HHDService) Restart(args map[string]string) error {
 }
 
 func (m HHDService) Status(map[string]string) bool {
-	if hhdId > 0 {
-		return true
+	return m.CurrentStatus == "start"
+}
+func (m *HHDService) Watcher() {
+	run := m.Status(nil)
+	if run == true && m.CurrentStatus == "end" {
+		m.CurrentStatus = "start"
+	} else if m.CurrentStatus == "start" && run == false {
+		m.Start(map[string]string{})
 	}
-	return false
+
+	if m.Status(nil) == false {
+		fmt.Sprintf("hhd service stop")
+		return
+	}
+
+	disks, err := funcs.DiskUseMetrics()
+	if err != nil {
+		//todo 获得内存失败咋个处理
+		log.Println(err)
+		return
+	}
+	pkt := src.NewPkt()
+	pkt.Id = g.HHD
+	pkt.Data, err = g.EncodeData(disks)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err = a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

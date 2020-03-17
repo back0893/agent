@@ -5,7 +5,9 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"errors"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
+	"log"
 	"os"
 	"os/exec"
 	"syscall"
@@ -20,14 +22,17 @@ func (r RedisService) Status(map[string]string) bool {
 }
 
 func NewRedisService() *RedisService {
-	return &RedisService{}
+	return &RedisService{
+		CurrentStatus: "start",
+	}
 }
 
-func (r RedisService) Start(map[string]string) error {
+func (r RedisService) Start(args map[string]string) error {
 	if g.Status(g.ReadPid("./redisPid")) {
 		return errors.New("redis已经运行")
 	}
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./redisPid")
+
 	return cmd.Run()
 }
 
@@ -36,6 +41,9 @@ func (r RedisService) Stop(map[string]string) error {
 	if pid == 0 {
 		return errors.New("redis灭有在运行")
 	}
+
+	r.CurrentStatus = "stop"
+
 	syscall.Kill(pid, syscall.SIGKILL)
 	//参数pid
 	os.Remove("./redisPid")
@@ -84,8 +92,6 @@ func (r RedisService) Action(action string, args map[string]string) {
 			str = "redis重启成功"
 		}
 	}
-	//无论怎么样,都会启动一个定时器,定时查询状态,以监控
-	go r.Watcher()
 
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
@@ -97,8 +103,27 @@ func (r RedisService) Action(action string, args map[string]string) {
 	}
 }
 func (r *RedisService) Watcher() {
-	src.AddTimer(20, func() {
-		start := r.Status(nil)
+	run := r.Status(nil)
+	if run == true && r.CurrentStatus == "end" {
+		r.CurrentStatus = "start"
+	} else if r.CurrentStatus == "start" && run == false {
+		r.Start(map[string]string{})
+	}
 
-	})
+	if r.Status(nil) == false {
+		fmt.Sprintf("redis service stop")
+		return
+	}
+	fmt.Println("redis")
+	pkt := src.NewPkt()
+	pkt.Id = g.ServiceResponse
+
+	//todo 收集redis的信息
+	pkt.Data = []byte("redis status....")
+
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	if err := a.GetCon().Write(pkt); err != nil {
+		log.Println(err)
+	}
+
 }

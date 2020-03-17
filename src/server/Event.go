@@ -36,6 +36,12 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		}
 		connection.SetExtraData("auth", &auth)
 		log.Printf("agent登录,登录用户:%s\n", auth.Username)
+
+		//用户登录成功
+		pkt.Id = g.ServicesList
+		pkt.Data, _ = g.EncodeData([]string{"redis", "heart"})
+		connection.Write(pkt)
+
 	case g.PING:
 		e.SetTimeout(connection)
 		log.Println("心跳")

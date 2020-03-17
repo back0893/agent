@@ -38,7 +38,7 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 		service := &model.Service{}
 		if err := g.DecodeData(pkt.Data, service); err == nil {
 			agent := ctx.Value(g.AGENT).(*Agent)
-			agent.taskQueue.Push(service)
+			agent.servicesList.AddServiceAction(service)
 		} else {
 			//todo 发送的消息不合规
 			fmt.Println("发送的消息不合规")
@@ -80,20 +80,10 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 	case g.AuthFail:
 		//认真失败...
 	case g.ServicesList:
-		sl := NewServicesList()
 		//如果中控服务器传递的值错误,那么就默认使用本地已经存在的services
-		if err := sl.WakeUp(); err != nil {
-			//读取本地保存的失败
-		}
-		//从中控中心获得需要启动的service
-		sl.Sync(pkt.Data)
-
 		agent := ctx.Value(g.AGENT).(*Agent)
-		for _, service := range sl.GetServices() {
-			agent.taskQueue.Push(service)
-		}
-		//保存
-		sl.Sleep()
+		//从中控中心获得需要监控的service和本地的同步
+		agent.servicesList.Sync(pkt.Data)
 	default:
 		log.Println("接受的回应id=>", pkt.Id)
 	}

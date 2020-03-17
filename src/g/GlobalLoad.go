@@ -1,7 +1,6 @@
 package g
 
 import (
-	"agent/src/agent"
 	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"github.com/spf13/cast"
@@ -43,10 +42,6 @@ func setLogWrite() {
 }
 func LoadInit(file string) {
 	utils.GlobalConfig.Load("json", file)
-
-	l := agent.NewServicesList()
-	l.WakeUp()
-
 	setLogWrite()
 }
 func GetRuntimePath() string {

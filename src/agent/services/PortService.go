@@ -5,22 +5,23 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	"errors"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
 	"strconv"
 	"strings"
-	"time"
 )
 
-//一个私有的全局变量
-var portId int64
-
 type PortService struct {
+	CurrentStatus string
+	Ports         []int64
 }
 
 func NewPortService() *PortService {
-	return &PortService{}
+	return &PortService{
+		Ports:         []int64{},
+		CurrentStatus: "start",
+	}
 }
 func (m *PortService) Action(action string, args map[string]string) {
 	switch action {
@@ -43,55 +44,20 @@ func (m *PortService) Action(action string, args map[string]string) {
 	}
 }
 
-func (m PortService) Start(args map[string]string) error {
-	if m.Status(args) {
-		return errors.New("service已经启动")
+func (m *PortService) Start(args map[string]string) error {
+	m.CurrentStatus = "start"
+	for _, port := range strings.Split(args["ports"], ",") {
+		p, err := strconv.ParseInt(port, 10, 64)
+		if err != nil {
+			continue
+		}
+		m.Ports = append(m.Ports, p)
 	}
-	var num = 60
-	if len(args) > 0 {
-		n, err := strconv.Atoi(args["interval"])
-		if err == nil {
-			num = n
-		}
-	}
-	portId = src.AddTimer(time.Duration(num)*time.Second, func() {
-		//端口使用,分割
-		lp := make([]int64, 0)
-		for _, port := range strings.Split(args["ports"], ",") {
-			p, err := strconv.ParseInt(port, 10, 64)
-			if err != nil {
-				continue
-			}
-			lp = append(lp, p)
-		}
-
-		ports, err := funcs.ListenTcpPortMetrics(lp...)
-		if err != nil {
-			//todo 获得内存失败咋个处理
-			log.Println(err)
-			return
-		}
-		pkt := src.NewPkt()
-		pkt.Id = g.PortListen
-		pkt.Data, err = g.EncodeData(ports)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		err = a.GetCon().Write(pkt)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	})
 	return nil
 }
 
-func (m PortService) Stop(map[string]string) error {
-	if portId > 0 {
-		src.CancelTimer(portId)
-	}
+func (m *PortService) Stop(map[string]string) error {
+	m.CurrentStatus = "stop"
 	return nil
 }
 
@@ -106,8 +72,39 @@ func (m PortService) Restart(args map[string]string) error {
 }
 
 func (m PortService) Status(map[string]string) bool {
-	if portId > 0 {
-		return true
+	return m.CurrentStatus == "start"
+}
+func (m *PortService) Watcher() {
+	run := m.Status(nil)
+	if run == true && m.CurrentStatus == "end" {
+		m.CurrentStatus = "start"
+	} else if m.CurrentStatus == "start" && run == false {
+		m.Start(map[string]string{})
 	}
-	return false
+
+	ports, err := funcs.ListenTcpPortMetrics(m.Ports...)
+	if err != nil {
+		//todo 获得内存失败咋个处理
+		log.Println(err)
+		return
+	}
+
+	if m.Status(nil) == false {
+		fmt.Sprintf("port service stop")
+		return
+	}
+
+	pkt := src.NewPkt()
+	pkt.Id = g.PortListen
+	pkt.Data, err = g.EncodeData(ports)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err = a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

@@ -5,7 +5,9 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/agent/services"
 	"agent/src/g"
+	"agent/src/g/model"
 	"errors"
+	"fmt"
 	"io/ioutil"
 )
 
@@ -31,7 +33,7 @@ func (sl *ServicesList) GetServices() map[string]iface.IService {
 
 func (sl *ServicesList) WakeUp() error {
 	path := g.GetRuntimePath()
-	data, err := ioutil.ReadFile(path)
+	data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", path, "services"))
 	if err != nil {
 		return err
 	}
@@ -46,7 +48,7 @@ func (sl *ServicesList) Sleep() error {
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(path, data, 0644); err != nil {
+	if err := ioutil.WriteFile(fmt.Sprintf("%s/%s", path, "services"), data, 0644); err != nil {
 		return err
 	}
 	return nil
@@ -93,6 +95,7 @@ func (sl *ServicesList) Sync(data []byte) {
 			sync[name] = tmp
 		}
 	}
+	fmt.Println(ss)
 	sl.services = sync
 }
 
@@ -118,4 +121,19 @@ func (sl *ServicesList) RunServiceAction() {
 		}
 		service.Action(task.Action, task.Args)
 	}
+}
+
+/**
+新增一个服务的动作
+*/
+
+func (sl *ServicesList) AddServiceAction(task *model.Service) {
+	sl.taskQueue.Push(task)
+}
+
+/**
+循环监控所有服务的状态
+*/
+func (sl *ServicesList) Listen() {
+
 }

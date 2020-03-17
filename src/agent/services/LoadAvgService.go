@@ -5,21 +5,19 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	"errors"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
-	"strconv"
-	"time"
 )
 
-//一个私有的全局变量
-var loadId int64
-
 type LoadAvgServiceService struct {
+	CurrentStatus string
 }
 
 func NewLoadAvgServiceService() *LoadAvgServiceService {
-	return &LoadAvgServiceService{}
+	return &LoadAvgServiceService{
+		CurrentStatus: "start",
+	}
 }
 func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 	switch action {
@@ -42,49 +40,18 @@ func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 	}
 }
 
-func (m LoadAvgServiceService) Start(args map[string]string) error {
-	if m.Status(args) {
-		return errors.New("service已经启动")
-	}
-	var num = 60
-	if len(args) > 0 {
-		n, err := strconv.Atoi(args["interval"])
-		if err == nil {
-			num = n
-		}
-	}
-	loadId = src.AddTimer(time.Duration(num)*time.Second, func() {
-		loadAvg, err := funcs.LoadAvgMetrics()
-		if err != nil {
-			//todo 获得内存失败咋个处理
-			log.Println(err)
-			return
-		}
-		pkt := src.NewPkt()
-		pkt.Id = g.LoadAvg
-		pkt.Data, err = g.EncodeData(loadAvg)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		err = a.GetCon().Write(pkt)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	})
+func (m *LoadAvgServiceService) Start(args map[string]string) error {
+	m.CurrentStatus = "start"
+
 	return nil
 }
 
-func (m LoadAvgServiceService) Stop(map[string]string) error {
-	if loadId > 0 {
-		src.CancelTimer(loadId)
-	}
+func (m *LoadAvgServiceService) Stop(map[string]string) error {
+	m.CurrentStatus = "stop"
 	return nil
 }
 
-func (m LoadAvgServiceService) Restart(args map[string]string) error {
+func (m *LoadAvgServiceService) Restart(args map[string]string) error {
 	if err := m.Stop(args); err != nil {
 		return err
 	}
@@ -95,8 +62,37 @@ func (m LoadAvgServiceService) Restart(args map[string]string) error {
 }
 
 func (m LoadAvgServiceService) Status(map[string]string) bool {
-	if loadId > 0 {
-		return true
+	return m.CurrentStatus == "start"
+}
+
+func (m *LoadAvgServiceService) Watcher() {
+	run := m.Status(nil)
+	if run == true && m.CurrentStatus == "end" {
+		m.CurrentStatus = "start"
+	} else if m.CurrentStatus == "start" && run == false {
+		m.Start(map[string]string{})
 	}
-	return false
+	if m.Status(nil) == false {
+		fmt.Sprintf("loadAvg  service stop")
+		return
+	}
+	loadAvg, err := funcs.LoadAvgMetrics()
+	if err != nil {
+		//todo 获得内存失败咋个处理
+		log.Println(err)
+		return
+	}
+	pkt := src.NewPkt()
+	pkt.Id = g.LoadAvg
+	pkt.Data, err = g.EncodeData(loadAvg)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err = a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

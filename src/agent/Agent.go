@@ -15,15 +15,15 @@ import (
 )
 
 type Agent struct {
-	con       iface.IConnection
-	conEvent  iface.IEventWatch
-	protocol  iface.IProtocol
-	ctx       context.Context
-	ctxCancel context.CancelFunc
-	isStop    *src.AtomicInt64
-	wg        *sync.WaitGroup
-	taskQueue *src.TaskQueue
-	cfg       string //配置文件的路径
+	con          iface.IConnection
+	conEvent     iface.IEventWatch
+	protocol     iface.IProtocol
+	ctx          context.Context
+	ctxCancel    context.CancelFunc
+	isStop       *src.AtomicInt64
+	wg           *sync.WaitGroup
+	cfg          string //配置文件的路径
+	servicesList *ServicesList
 }
 
 func (a *Agent) GetCon() iface.IConnection {
@@ -108,10 +108,11 @@ func NewAgent(cfg string) (*Agent, error) {
 		return nil, err
 	}
 	agent := &Agent{
-		isStop:   src.NewAtomicInt64(0),
-		conEvent: net.NewEventWatch(),
-		wg:       &sync.WaitGroup{},
-		cfg:      cfg,
+		isStop:       src.NewAtomicInt64(0),
+		conEvent:     net.NewEventWatch(),
+		wg:           &sync.WaitGroup{},
+		cfg:          cfg,
+		servicesList: NewServicesList(),
 	}
 
 	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), g.AGENT, agent))
@@ -121,7 +122,21 @@ func NewAgent(cfg string) (*Agent, error) {
 	//断线重连
 	agent.AddClose(agent.ReCon)
 
+	//初始化定时器
 	src.InitTimingWheel(agent.GetContext())
+
+	//初始化services列表
+	agent.servicesList.WakeUp()
+	//新增在结束时,保存
+	agent.AddClose(func(ctx context.Context, connection iface.IConnection) {
+		ctx.Value(g.AGENT).(*Agent).servicesList.Sleep()
+	})
+	//新增一个服务的定时监控
+	src.AddTimer(30*time.Second, func() {
+		for _, service := range agent.servicesList.GetServices() {
+			service.Watcher()
+		}
+	})
 
 	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 

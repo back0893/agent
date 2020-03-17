@@ -15,8 +15,8 @@ const (
 	HHD          = 102 //硬盘使用
 	MEM          = 103 //内存使用
 	LoadAvg      = 104 //负载
-	ServicesList = 105
 	PortListen   = 105 //端口监听情况
+	ServicesList = 106 //下发默认启动服务
 
 	Service         = 201 //对于service的命令
 	ServiceResponse = 301 //service执行后的回应
