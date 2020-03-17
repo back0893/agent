@@ -17,6 +17,7 @@ func start(cfg string) {
 	}
 	agentClient.Start()
 	g.SavePid("./pid")
+	utils.GlobalConfig.Set(g.AGENT, agentClient)
 	agentClient.Wait()
 }
 func stop() {

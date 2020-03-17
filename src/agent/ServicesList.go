@@ -13,12 +13,15 @@ import (
 
 type ServicesList struct {
 	services  map[string]iface.IService
-	agent     *Agent
 	taskQueue *src.TaskQueue
 }
 
 func NewServicesList() *ServicesList {
-	return &ServicesList{services: map[string]iface.IService{}}
+	return &ServicesList{
+		services:  map[string]iface.IService{},
+		taskQueue: src.NewTaskQueue(),
+	}
+
 }
 func (sl *ServicesList) AddService(name string, s iface.IService) {
 	sl.services[name] = s
@@ -82,21 +85,22 @@ func (sl *ServicesList) NewService(name string) (iface.IService, error) {
 */
 func (sl *ServicesList) Sync(data []byte) {
 	ss := make([]string, 0)
-	if err := g.DecodeData(data, ss); err != nil {
+	if err := g.DecodeData(data, &ss); err != nil {
+		fmt.Println(err)
 		return
 	}
 	sync := make(map[string]iface.IService)
 	for _, name := range ss {
 		if tmp, ok := sl.services[name]; ok == false {
 			if service, err := sl.NewService(name); err == nil {
-				sl.AddService(name, service)
+				sync[name] = service
 			}
 		} else {
 			sync[name] = tmp
 		}
 	}
-	fmt.Println(ss)
 	sl.services = sync
+	fmt.Println(sl.services)
 }
 
 /**
@@ -135,5 +139,7 @@ func (sl *ServicesList) AddServiceAction(task *model.Service) {
 循环监控所有服务的状态
 */
 func (sl *ServicesList) Listen() {
-
+	for _, service := range sl.GetServices() {
+		service.Watcher()
+	}
 }

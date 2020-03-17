@@ -120,7 +120,6 @@ func (r *RedisService) Watcher() {
 
 	//todo 收集redis的信息
 	pkt.Data = []byte("redis status....")
-
 	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 	if err := a.GetCon().Write(pkt); err != nil {
 		log.Println(err)

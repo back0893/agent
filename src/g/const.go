@@ -25,6 +25,4 @@ const (
 	AGENT string = "agent"
 	//全局产量,当前agent的版本
 	VERSION = 2
-	//加载的服务状态
-	SERVICELIST = "servicelist"
 )

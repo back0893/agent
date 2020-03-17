@@ -132,11 +132,7 @@ func NewAgent(cfg string) (*Agent, error) {
 		ctx.Value(g.AGENT).(*Agent).servicesList.Sleep()
 	})
 	//新增一个服务的定时监控
-	src.AddTimer(30*time.Second, func() {
-		for _, service := range agent.servicesList.GetServices() {
-			service.Watcher()
-		}
-	})
+	src.AddTimer(5*time.Second, agent.servicesList.Listen)
 
 	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 
