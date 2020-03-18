@@ -27,7 +27,7 @@ func stop() {
 func main() {
 	var action string
 	var cfg string
-	flag.StringVar(&cfg, "c", "./app.json", "加载的配置,只有start时才有用")
+	flag.StringVar(&cfg, "c", "./client.json", "加载的配置,只有start时才有用")
 	flag.StringVar(&action, "t", "start", "命令动作,start|stop")
 	flag.Parse()
 	//获得当前的文件名,以便更新

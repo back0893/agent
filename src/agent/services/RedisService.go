@@ -23,11 +23,12 @@ func (r *RedisService) GetCurrentStatus() string {
 }
 
 func (r *RedisService) SetCurrentStatus(status string) {
+	fmt.Println("set current status")
 	r.CurrentStatus = status
 }
 
 func (r *RedisService) Status(map[string]string) bool {
-	r.ac += 1
+	fmt.Println("redis status ok", r.CurrentStatus)
 	return g.Status(g.ReadPid("./redisPid"))
 }
 
@@ -43,7 +44,7 @@ func (r *RedisService) Start(args map[string]string) error {
 	}
 	r.CurrentStatus = "start"
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./redisPid")
-	r.ac++
+	fmt.Println("redis start ok", r.CurrentStatus)
 	return cmd.Run()
 }
 
@@ -52,8 +53,8 @@ func (r *RedisService) Stop(map[string]string) error {
 	if status == false {
 		return errors.New("redis灭有在运行")
 	}
-	r.ac++
 	r.CurrentStatus = "stop"
+	r.ac = 100
 	syscall.Kill(g.ReadPid("./redisPid"), syscall.SIGKILL)
 	//参数pid
 	os.Remove("./redisPid")
@@ -114,13 +115,15 @@ func (r RedisService) Action(action string, args map[string]string) {
 	}
 }
 func (r *RedisService) Watcher() {
-	run := r.Status(nil)
 	fmt.Println("redis status", r.CurrentStatus)
-	fmt.Println(r.ac)
+	fmt.Println("redis ac", r.ac)
+	run := r.Status(nil)
 	if run == true && r.CurrentStatus == "end" {
 		r.CurrentStatus = "start"
+		fmt.Println("redis ====", r.ac)
 	} else if r.CurrentStatus == "start" && run == false {
 		r.Start(map[string]string{})
+		fmt.Println("redis ----", r.ac)
 	}
 
 	if r.Status(nil) == false {
