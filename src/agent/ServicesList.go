@@ -11,6 +11,10 @@ import (
 	"io/ioutil"
 )
 
+type service struct {
+	Name          string
+	CurrentStatus string
+}
 type ServicesList struct {
 	services  map[string]iface.IService
 	taskQueue *src.TaskQueue
@@ -40,14 +44,31 @@ func (sl *ServicesList) WakeUp() error {
 	if err != nil {
 		return err
 	}
-	if err := g.DecodeData(data, sl.services); err != nil {
+	t := make([]service, 0)
+	if err := g.DecodeData(data, &t); err != nil {
 		return err
+	}
+	for _, se := range t {
+		service, err := sl.NewService(se.Name)
+		if err != nil {
+			continue
+		}
+		service.SetCurrentStatus(se.CurrentStatus)
+		sl.AddService(se.Name, service)
+		fmt.Println(se.Name, se.CurrentStatus)
 	}
 	return nil
 }
 func (sl *ServicesList) Sleep() error {
+	t := make([]service, 0)
+	for name, s := range sl.GetServices() {
+		t = append(t, service{
+			Name:          name,
+			CurrentStatus: s.GetCurrentStatus(),
+		})
+	}
 	path := g.GetRuntimePath()
-	data, err := g.EncodeData(sl.services)
+	data, err := g.EncodeData(t)
 	if err != nil {
 		return err
 	}
@@ -100,7 +121,9 @@ func (sl *ServicesList) Sync(data []byte) {
 		}
 	}
 	sl.services = sync
-	fmt.Println(sl.services)
+	for name, s := range sl.services {
+		fmt.Println(name, s.GetCurrentStatus())
+	}
 }
 
 /**

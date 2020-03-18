@@ -14,6 +14,13 @@ type LoadAvgServiceService struct {
 	CurrentStatus string
 }
 
+func (m *LoadAvgServiceService) GetCurrentStatus() string {
+	return m.CurrentStatus
+}
+
+func (m *LoadAvgServiceService) SetCurrentStatus(status string) {
+	m.CurrentStatus = status
+}
 func NewLoadAvgServiceService() *LoadAvgServiceService {
 	return &LoadAvgServiceService{
 		CurrentStatus: "start",
@@ -73,7 +80,7 @@ func (m *LoadAvgServiceService) Watcher() {
 		m.Start(map[string]string{})
 	}
 	if m.Status(nil) == false {
-		fmt.Sprintf("loadAvg  service stop")
+		fmt.Printf("loadAvg  service stop")
 		return
 	}
 	loadAvg, err := funcs.LoadAvgMetrics()

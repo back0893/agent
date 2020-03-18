@@ -14,6 +14,13 @@ type MemoryService struct {
 	CurrentStatus string
 }
 
+func (m *MemoryService) GetCurrentStatus() string {
+	return m.CurrentStatus
+}
+
+func (m *MemoryService) SetCurrentStatus(status string) {
+	m.CurrentStatus = status
+}
 func NewMemoryService() *MemoryService {
 	return &MemoryService{
 		CurrentStatus: "start",
@@ -75,7 +82,7 @@ func (m *MemoryService) Watcher() {
 	}
 
 	if m.Status(nil) == false {
-		fmt.Sprintf("memeroy service stop")
+		fmt.Printf("memeroy service stop")
 		return
 	}
 

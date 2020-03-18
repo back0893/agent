@@ -133,6 +133,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	})
 	//新增一个服务的定时监控
 	src.AddTimer(5*time.Second, agent.servicesList.Listen)
+	go agent.servicesList.RunServiceAction()
 
 	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 

@@ -14,6 +14,14 @@ type CPUService struct {
 	CurrentStatus string
 }
 
+func (m *CPUService) GetCurrentStatus() string {
+	return m.CurrentStatus
+}
+
+func (m *CPUService) SetCurrentStatus(status string) {
+	m.CurrentStatus = status
+}
+
 func NewCPUService() *CPUService {
 	return &CPUService{
 		CurrentStatus: "start",
@@ -74,7 +82,7 @@ func (m *CPUService) Watcher() {
 	}
 
 	if m.Status(nil) == false {
-		fmt.Sprintf("cpu service stop")
+		fmt.Printf("cpu service stop")
 		return
 	}
 

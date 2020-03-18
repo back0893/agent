@@ -13,6 +13,13 @@ type HeartBeatService struct {
 	CurrentStatus string //当前配置的服务状态
 }
 
+func (m *HeartBeatService) GetCurrentStatus() string {
+	return m.CurrentStatus
+}
+
+func (m *HeartBeatService) SetCurrentStatus(status string) {
+	m.CurrentStatus = status
+}
 func (m *HeartBeatService) Watcher() {
 	run := m.Status(nil)
 	if run == true && m.CurrentStatus == "end" {
@@ -21,7 +28,7 @@ func (m *HeartBeatService) Watcher() {
 		m.Start(map[string]string{})
 	}
 	if m.Status(nil) == false {
-		fmt.Sprintf("heart service stop")
+		fmt.Printf("heart service stop")
 		return
 	}
 	fmt.Println("ping")

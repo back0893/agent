@@ -15,9 +15,19 @@ import (
 
 type RedisService struct {
 	CurrentStatus string
+	ac            int
 }
 
-func (r RedisService) Status(map[string]string) bool {
+func (r *RedisService) GetCurrentStatus() string {
+	return r.CurrentStatus
+}
+
+func (r *RedisService) SetCurrentStatus(status string) {
+	r.CurrentStatus = status
+}
+
+func (r *RedisService) Status(map[string]string) bool {
+	r.ac += 1
 	return g.Status(g.ReadPid("./redisPid"))
 }
 
@@ -27,26 +37,27 @@ func NewRedisService() *RedisService {
 	}
 }
 
-func (r RedisService) Start(args map[string]string) error {
+func (r *RedisService) Start(args map[string]string) error {
 	if g.Status(g.ReadPid("./redisPid")) {
 		return errors.New("redis已经运行")
 	}
+	r.CurrentStatus = "start"
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./redisPid")
-
+	r.ac++
 	return cmd.Run()
 }
 
-func (r RedisService) Stop(map[string]string) error {
-	pid := g.ReadPid("./redisPid")
-	if pid == 0 {
+func (r *RedisService) Stop(map[string]string) error {
+	status := r.Status(nil)
+	if status == false {
 		return errors.New("redis灭有在运行")
 	}
-
+	r.ac++
 	r.CurrentStatus = "stop"
-
-	syscall.Kill(pid, syscall.SIGKILL)
+	syscall.Kill(g.ReadPid("./redisPid"), syscall.SIGKILL)
 	//参数pid
 	os.Remove("./redisPid")
+	fmt.Println("redis stop ok", r.CurrentStatus)
 	return nil
 }
 
@@ -104,6 +115,8 @@ func (r RedisService) Action(action string, args map[string]string) {
 }
 func (r *RedisService) Watcher() {
 	run := r.Status(nil)
+	fmt.Println("redis status", r.CurrentStatus)
+	fmt.Println(r.ac)
 	if run == true && r.CurrentStatus == "end" {
 		r.CurrentStatus = "start"
 	} else if r.CurrentStatus == "start" && run == false {
@@ -111,7 +124,7 @@ func (r *RedisService) Watcher() {
 	}
 
 	if r.Status(nil) == false {
-		fmt.Sprintf("redis service stop")
+		fmt.Printf("redis service stop")
 		return
 	}
 	fmt.Println("redis")

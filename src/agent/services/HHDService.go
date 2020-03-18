@@ -19,7 +19,13 @@ func NewHHDService() *HHDService {
 		CurrentStatus: "start",
 	}
 }
+func (m *HHDService) GetCurrentStatus() string {
+	return m.CurrentStatus
+}
 
+func (m *HHDService) SetCurrentStatus(status string) {
+	m.CurrentStatus = status
+}
 func (m *HHDService) Action(action string, args map[string]string) {
 	switch action {
 	case "start":
@@ -73,7 +79,7 @@ func (m *HHDService) Watcher() {
 	}
 
 	if m.Status(nil) == false {
-		fmt.Sprintf("hhd service stop")
+		fmt.Printf("hhd service stop")
 		return
 	}
 

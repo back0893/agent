@@ -11,4 +11,6 @@ type IService interface {
 	Status(map[string]string) bool                //查询服务的运行状态
 	Action(action string, args map[string]string) //用来执行相应的动作
 	Watcher()                                     //监控运行状态
+	GetCurrentStatus() string
+	SetCurrentStatus(string)
 }

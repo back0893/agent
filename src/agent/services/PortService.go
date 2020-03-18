@@ -17,6 +17,13 @@ type PortService struct {
 	Ports         []int64
 }
 
+func (m *PortService) GetCurrentStatus() string {
+	return m.CurrentStatus
+}
+
+func (m *PortService) SetCurrentStatus(status string) {
+	m.CurrentStatus = status
+}
 func NewPortService() *PortService {
 	return &PortService{
 		Ports:         []int64{},
@@ -90,7 +97,7 @@ func (m *PortService) Watcher() {
 	}
 
 	if m.Status(nil) == false {
-		fmt.Sprintf("port service stop")
+		fmt.Printf("port service stop")
 		return
 	}
 
