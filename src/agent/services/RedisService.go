@@ -28,7 +28,6 @@ func (r *RedisService) SetCurrentStatus(status string) {
 }
 
 func (r *RedisService) Status(map[string]string) bool {
-	fmt.Println("redis status ok", r.CurrentStatus)
 	return g.Status(g.ReadPid("./redisPid"))
 }
 
@@ -53,6 +52,7 @@ func (r *RedisService) Stop(map[string]string) error {
 	if status == false {
 		return errors.New("redis灭有在运行")
 	}
+	fmt.Printf("%p\n", r)
 	r.CurrentStatus = "stop"
 	r.ac = 100
 	syscall.Kill(g.ReadPid("./redisPid"), syscall.SIGKILL)
@@ -62,7 +62,7 @@ func (r *RedisService) Stop(map[string]string) error {
 	return nil
 }
 
-func (r RedisService) Restart(args map[string]string) error {
+func (r *RedisService) Restart(args map[string]string) error {
 	if err := r.Stop(args); err != nil {
 		return err
 	}
@@ -72,7 +72,8 @@ func (r RedisService) Restart(args map[string]string) error {
 	return nil
 }
 
-func (r RedisService) Action(action string, args map[string]string) {
+func (r *RedisService) Action(action string, args map[string]string) {
+	fmt.Printf("%p\n", r)
 	var str = "未知命令"
 	switch action {
 	case "start":
@@ -115,7 +116,7 @@ func (r RedisService) Action(action string, args map[string]string) {
 	}
 }
 func (r *RedisService) Watcher() {
-	fmt.Println("redis status", r.CurrentStatus)
+	fmt.Printf("%p\n", r)
 	fmt.Println("redis ac", r.ac)
 	run := r.Status(nil)
 	if run == true && r.CurrentStatus == "end" {

@@ -113,6 +113,7 @@ func (sl *ServicesList) Sync(data []byte) {
 	sync := make(map[string]iface.IService)
 	for _, name := range ss {
 		if tmp, ok := sl.services[name]; ok == false {
+			fmt.Println("-------------------new service")
 			if service, err := sl.NewService(name); err == nil {
 				sync[name] = service
 			}
@@ -137,7 +138,11 @@ func (sl *ServicesList) RunServiceAction() {
 		var err error
 
 		task := sl.taskQueue.Pop()
+		fmt.Print(task.Service)
 		service, ok = sl.GetService(task.Service)
+		fmt.Println("get=====>", ok)
+		fmt.Printf("%p\n", service)
+		fmt.Printf("%p\n", sl.services["redis"])
 		if ok == false {
 			service, err = sl.NewService(task.Service)
 			if err != nil {
@@ -146,6 +151,7 @@ func (sl *ServicesList) RunServiceAction() {
 			}
 			sl.AddService(task.Service, service)
 		}
+		fmt.Printf("%p\n", service)
 		service.Action(task.Action, task.Args)
 	}
 }
