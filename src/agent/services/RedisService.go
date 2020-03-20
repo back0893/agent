@@ -2,6 +2,7 @@ package services
 
 import (
 	"agent/src"
+	"agent/src/agent"
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"errors"
@@ -15,7 +16,7 @@ import (
 
 type RedisService struct {
 	CurrentStatus string
-	ac            int
+	timerId       int64
 }
 
 func (r *RedisService) GetCurrentStatus() string {
@@ -54,7 +55,6 @@ func (r *RedisService) Stop(map[string]string) error {
 	}
 	fmt.Printf("%p\n", r)
 	r.CurrentStatus = "stop"
-	r.ac = 100
 	syscall.Kill(g.ReadPid("./redisPid"), syscall.SIGKILL)
 	//参数pid
 	os.Remove("./redisPid")
@@ -115,31 +115,31 @@ func (r *RedisService) Action(action string, args map[string]string) {
 		//todo 发送失败..应该有后续操作
 	}
 }
+
+func (r *RedisService) upload(args map[string]string) {
+	fmt.Println("redis")
+	if r.timerId != 0 {
+		src.CancelTimer(r.timerId)
+	}
+
+	interval := agent.GetInterval(args, 20)
+
+	r.timerId = src.AddTimer(interval, func() {
+		pkt := src.NewPkt()
+		pkt.Id = g.ServiceResponse
+		//todo 收集redis的信息
+		pkt.Data = []byte(fmt.Sprintf("redis status====>%v", r.Status(nil)))
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		if err := a.GetCon().Write(pkt); err != nil {
+			log.Println(err)
+		}
+	})
+}
 func (r *RedisService) Watcher() {
-	fmt.Printf("%p\n", r)
-	fmt.Println("redis ac", r.ac)
 	run := r.Status(nil)
 	if run == true && r.CurrentStatus == "end" {
 		r.CurrentStatus = "start"
-		fmt.Println("redis ====", r.ac)
 	} else if r.CurrentStatus == "start" && run == false {
 		r.Start(map[string]string{})
-		fmt.Println("redis ----", r.ac)
 	}
-
-	if r.Status(nil) == false {
-		fmt.Printf("redis service stop")
-		return
-	}
-	fmt.Println("redis")
-	pkt := src.NewPkt()
-	pkt.Id = g.ServiceResponse
-
-	//todo 收集redis的信息
-	pkt.Data = []byte("redis status....")
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	if err := a.GetCon().Write(pkt); err != nil {
-		log.Println(err)
-	}
-
 }

@@ -5,13 +5,13 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
 )
 
 type LoadAvgServiceService struct {
 	CurrentStatus string
+	timeId        int64
 }
 
 func (m *LoadAvgServiceService) GetCurrentStatus() string {
@@ -71,35 +71,39 @@ func (m *LoadAvgServiceService) Restart(args map[string]string) error {
 func (m LoadAvgServiceService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
+func (m *LoadAvgServiceService) upload() {
+	pkt := src.NewPkt()
+	pkt.Id = g.LoadAvg
 
+	if m.Status(nil) == false {
+		pkt.Data, _ = g.EncodeData("loadAvg  service stop")
+	} else {
+		loadAvg, err := funcs.LoadAvgMetrics()
+		if err != nil {
+			//todo 获得内存失败咋个处理
+			log.Println(err)
+			return
+		}
+
+		pkt.Data, err = g.EncodeData(loadAvg)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
 func (m *LoadAvgServiceService) Watcher() {
 	run := m.Status(nil)
 	if run == true && m.CurrentStatus == "end" {
 		m.CurrentStatus = "start"
 	} else if m.CurrentStatus == "start" && run == false {
 		m.Start(map[string]string{})
-	}
-	if m.Status(nil) == false {
-		fmt.Printf("loadAvg  service stop")
-		return
-	}
-	loadAvg, err := funcs.LoadAvgMetrics()
-	if err != nil {
-		//todo 获得内存失败咋个处理
-		log.Println(err)
-		return
-	}
-	pkt := src.NewPkt()
-	pkt.Id = g.LoadAvg
-	pkt.Data, err = g.EncodeData(loadAvg)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err = a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
 	}
 }

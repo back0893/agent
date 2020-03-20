@@ -5,13 +5,13 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
 )
 
 type HHDService struct {
 	CurrentStatus string
+	timeId        int64
 }
 
 func NewHHDService() *HHDService {
@@ -70,36 +70,39 @@ func (m HHDService) Restart(args map[string]string) error {
 func (m HHDService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
+func (m *HHDService) upload() {
+	pkt := src.NewPkt()
+	pkt.Id = g.HHD
+
+	if m.Status(nil) == false {
+		pkt.Data, _ = g.EncodeData("hhd service stop")
+	} else {
+		disks, err := funcs.DiskUseMetrics()
+		if err != nil {
+			//todo 获得内存失败咋个处理
+			log.Println(err)
+			return
+		}
+
+		pkt.Data, err = g.EncodeData(disks)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
 func (m *HHDService) Watcher() {
 	run := m.Status(nil)
 	if run == true && m.CurrentStatus == "end" {
 		m.CurrentStatus = "start"
 	} else if m.CurrentStatus == "start" && run == false {
 		m.Start(map[string]string{})
-	}
-
-	if m.Status(nil) == false {
-		fmt.Printf("hhd service stop")
-		return
-	}
-
-	disks, err := funcs.DiskUseMetrics()
-	if err != nil {
-		//todo 获得内存失败咋个处理
-		log.Println(err)
-		return
-	}
-	pkt := src.NewPkt()
-	pkt.Id = g.HHD
-	pkt.Data, err = g.EncodeData(disks)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err = a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
 	}
 }

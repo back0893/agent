@@ -5,13 +5,13 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
 )
 
 type CPUService struct {
 	CurrentStatus string
+	timeId        int64
 }
 
 func (m *CPUService) GetCurrentStatus() string {
@@ -72,44 +72,45 @@ func (m *CPUService) Restart(args map[string]string) error {
 func (m CPUService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
+func (m *CPUService) upload() {
+	pkt := src.NewPkt()
+	pkt.Id = g.CPU
 
+	if m.Status(nil) == false {
+		pkt.Data, _ = g.EncodeData("cpu service stop")
+		return
+	} else {
+		if funcs.CpuPrepared() == false {
+			funcs.UpdateCpuStat()
+			return
+		}
+
+		err := funcs.UpdateCpuStat()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		cpu := funcs.CpuMetrics()
+		pkt.Data, err = g.EncodeData(cpu)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
 func (m *CPUService) Watcher() {
 	run := m.Status(nil)
 	if run == true && m.CurrentStatus == "end" {
 		m.CurrentStatus = "start"
 	} else if m.CurrentStatus == "start" && run == false {
 		m.Start(map[string]string{})
-	}
-
-	if m.Status(nil) == false {
-		fmt.Printf("cpu service stop")
-		return
-	}
-
-	if funcs.CpuPrepared() == false {
-		funcs.UpdateCpuStat()
-		return
-	}
-
-	err := funcs.UpdateCpuStat()
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	cpu := funcs.CpuMetrics()
-
-	pkt := src.NewPkt()
-	pkt.Id = g.CPU
-	pkt.Data, err = g.EncodeData(cpu)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err = a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
 	}
 }

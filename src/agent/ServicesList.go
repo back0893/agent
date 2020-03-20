@@ -21,8 +21,9 @@ type ServicesList struct {
 }
 
 func NewServicesList() *ServicesList {
+	//心跳的服务默认存在
 	return &ServicesList{
-		services:  map[string]iface.IService{},
+		services:  map[string]iface.IService{"heart": services.NewHeartBeatService()},
 		taskQueue: src.NewTaskQueue(),
 	}
 

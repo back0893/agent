@@ -5,7 +5,6 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
 	"strconv"
@@ -81,37 +80,39 @@ func (m PortService) Restart(args map[string]string) error {
 func (m PortService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
+func (m *PortService) upload() {
+	pkt := src.NewPkt()
+	pkt.Id = g.PortListen
+
+	if m.Status(nil) == false {
+		pkt.Data, _ = g.EncodeData("port service stop")
+		return
+	} else {
+		ports, err := funcs.ListenTcpPortMetrics(m.Ports...)
+		if err != nil {
+			//todo 获得内存失败咋个处理
+			log.Println(err)
+			return
+		}
+		pkt.Data, err = g.EncodeData(ports)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
 func (m *PortService) Watcher() {
 	run := m.Status(nil)
 	if run == true && m.CurrentStatus == "end" {
 		m.CurrentStatus = "start"
 	} else if m.CurrentStatus == "start" && run == false {
 		m.Start(map[string]string{})
-	}
-
-	ports, err := funcs.ListenTcpPortMetrics(m.Ports...)
-	if err != nil {
-		//todo 获得内存失败咋个处理
-		log.Println(err)
-		return
-	}
-
-	if m.Status(nil) == false {
-		fmt.Printf("port service stop")
-		return
-	}
-
-	pkt := src.NewPkt()
-	pkt.Id = g.PortListen
-	pkt.Data, err = g.EncodeData(ports)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err = a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
 	}
 }
