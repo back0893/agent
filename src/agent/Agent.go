@@ -4,6 +4,7 @@ import (
 	"agent/src"
 	"agent/src/g"
 	"context"
+	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/net"
 	"log"
@@ -123,6 +124,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	agent.AddClose(agent.ReCon)
 
 	//初始化定时器
+	fmt.Println("init timer")
 	src.InitTimingWheel(agent.GetContext())
 
 	//初始化services列表

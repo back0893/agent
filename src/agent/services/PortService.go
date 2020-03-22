@@ -9,11 +9,13 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type PortService struct {
 	CurrentStatus string
 	Ports         []int64
+	timeId        int64
 }
 
 func (m *PortService) GetCurrentStatus() string {
@@ -24,10 +26,12 @@ func (m *PortService) SetCurrentStatus(status string) {
 	m.CurrentStatus = status
 }
 func NewPortService() *PortService {
-	return &PortService{
+	s := &PortService{
 		Ports:         []int64{},
 		CurrentStatus: "start",
 	}
+	s.upload(map[string]string{})
+	return s
 }
 func (m *PortService) Action(action string, args map[string]string) {
 	switch action {
@@ -80,33 +84,38 @@ func (m PortService) Restart(args map[string]string) error {
 func (m PortService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
-func (m *PortService) upload() {
-	pkt := src.NewPkt()
-	pkt.Id = g.PortListen
+func (m *PortService) upload(args map[string]string) {
+	if m.timeId != 0 {
+		src.CancelTimer(m.timeId)
+	}
+	m.timeId = src.AddTimer(g.GetInterval(args, 30)*time.Second, func() {
+		pkt := src.NewPkt()
+		pkt.Id = g.PortListen
 
-	if m.Status(nil) == false {
-		pkt.Data, _ = g.EncodeData("port service stop")
-		return
-	} else {
-		ports, err := funcs.ListenTcpPortMetrics(m.Ports...)
+		if m.Status(nil) == false {
+			pkt.Data, _ = g.EncodeData("port service stop")
+			return
+		} else {
+			ports, err := funcs.ListenTcpPortMetrics(m.Ports...)
+			if err != nil {
+				//todo 获得内存失败咋个处理
+				log.Println(err)
+				return
+			}
+			pkt.Data, err = g.EncodeData(ports)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		err := a.GetCon().Write(pkt)
 		if err != nil {
-			//todo 获得内存失败咋个处理
 			log.Println(err)
 			return
 		}
-		pkt.Data, err = g.EncodeData(ports)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err := a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	})
 }
 func (m *PortService) Watcher() {
 	run := m.Status(nil)
@@ -115,4 +124,7 @@ func (m *PortService) Watcher() {
 	} else if m.CurrentStatus == "start" && run == false {
 		m.Start(map[string]string{})
 	}
+}
+func (m *PortService) Cancel() {
+	src.CancelTimer(m.timeId)
 }

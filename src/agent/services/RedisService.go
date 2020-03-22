@@ -2,7 +2,6 @@ package services
 
 import (
 	"agent/src"
-	"agent/src/agent"
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"errors"
@@ -12,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 )
 
 type RedisService struct {
@@ -33,9 +33,11 @@ func (r *RedisService) Status(map[string]string) bool {
 }
 
 func NewRedisService() *RedisService {
-	return &RedisService{
+	s := &RedisService{
 		CurrentStatus: "start",
 	}
+	s.upload(map[string]string{})
+	return s
 }
 
 func (r *RedisService) Start(args map[string]string) error {
@@ -122,9 +124,10 @@ func (r *RedisService) upload(args map[string]string) {
 		src.CancelTimer(r.timerId)
 	}
 
-	interval := agent.GetInterval(args, 20)
-
-	r.timerId = src.AddTimer(interval, func() {
+	interval := g.GetInterval(args, 12)
+	fmt.Println("redis interval====>", interval*time.Second)
+	r.timerId = src.AddTimer(interval*time.Second, func() {
+		fmt.Println("redis")
 		pkt := src.NewPkt()
 		pkt.Id = g.ServiceResponse
 		//todo 收集redis的信息
@@ -142,4 +145,7 @@ func (r *RedisService) Watcher() {
 	} else if r.CurrentStatus == "start" && run == false {
 		r.Start(map[string]string{})
 	}
+}
+func (m *RedisService) Cancel() {
+	src.CancelTimer(m.timerId)
 }

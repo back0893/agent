@@ -7,6 +7,7 @@ import (
 	"agent/src/g"
 	"github.com/back0893/goTcp/utils"
 	"log"
+	"time"
 )
 
 type LoadAvgServiceService struct {
@@ -22,9 +23,11 @@ func (m *LoadAvgServiceService) SetCurrentStatus(status string) {
 	m.CurrentStatus = status
 }
 func NewLoadAvgServiceService() *LoadAvgServiceService {
-	return &LoadAvgServiceService{
+	s := &LoadAvgServiceService{
 		CurrentStatus: "start",
 	}
+	s.upload(map[string]string{})
+	return s
 }
 func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 	switch action {
@@ -71,33 +74,38 @@ func (m *LoadAvgServiceService) Restart(args map[string]string) error {
 func (m LoadAvgServiceService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
-func (m *LoadAvgServiceService) upload() {
-	pkt := src.NewPkt()
-	pkt.Id = g.LoadAvg
+func (m *LoadAvgServiceService) upload(args map[string]string) {
+	if m.timeId != 0 {
+		src.CancelTimer(m.timeId)
+	}
+	m.timeId = src.AddTimer(g.GetInterval(args, 30)*time.Second, func() {
+		pkt := src.NewPkt()
+		pkt.Id = g.LoadAvg
 
-	if m.Status(nil) == false {
-		pkt.Data, _ = g.EncodeData("loadAvg  service stop")
-	} else {
-		loadAvg, err := funcs.LoadAvgMetrics()
+		if m.Status(nil) == false {
+			pkt.Data, _ = g.EncodeData("loadAvg  service stop")
+		} else {
+			loadAvg, err := funcs.LoadAvgMetrics()
+			if err != nil {
+				//todo 获得内存失败咋个处理
+				log.Println(err)
+				return
+			}
+
+			pkt.Data, err = g.EncodeData(loadAvg)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		err := a.GetCon().Write(pkt)
 		if err != nil {
-			//todo 获得内存失败咋个处理
 			log.Println(err)
 			return
 		}
-
-		pkt.Data, err = g.EncodeData(loadAvg)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err := a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	})
 }
 func (m *LoadAvgServiceService) Watcher() {
 	run := m.Status(nil)
@@ -106,4 +114,7 @@ func (m *LoadAvgServiceService) Watcher() {
 	} else if m.CurrentStatus == "start" && run == false {
 		m.Start(map[string]string{})
 	}
+}
+func (m *LoadAvgServiceService) Cancel() {
+	src.CancelTimer(m.timeId)
 }

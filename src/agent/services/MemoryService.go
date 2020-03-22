@@ -5,12 +5,15 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
+	"time"
 )
 
 type MemoryService struct {
 	CurrentStatus string
+	timeId        int64
 }
 
 func (m *MemoryService) GetCurrentStatus() string {
@@ -21,9 +24,11 @@ func (m *MemoryService) SetCurrentStatus(status string) {
 	m.CurrentStatus = status
 }
 func NewMemoryService() *MemoryService {
-	return &MemoryService{
+	s := &MemoryService{
 		CurrentStatus: "start",
 	}
+	s.upload(map[string]string{})
+	return s
 }
 
 func (m *MemoryService) Action(action string, args map[string]string) {
@@ -72,31 +77,37 @@ func (m MemoryService) Restart(args map[string]string) error {
 func (m MemoryService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
-func (m *MemoryService) upload() {
-	pkt := src.NewPkt()
-	pkt.Id = g.MEM
-	if m.Status(nil) == false {
-		pkt.Data, _ = g.EncodeData("memeroy service stop")
-	} else {
-		memory, err := funcs.MemMetrics()
-		if err != nil {
-			//todo 获得内存失败咋个处理
-			log.Println(err)
-			return
-		}
-		pkt.Data, err = g.EncodeData(memory)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+func (m *MemoryService) upload(args map[string]string) {
+	if m.timeId != 0 {
+		src.CancelTimer(m.timeId)
 	}
 
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err := a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
-	}
+	m.timeId = src.AddTimer(g.GetInterval(args, 30)*time.Second, func() {
+		pkt := src.NewPkt()
+		pkt.Id = g.MEM
+		if m.Status(nil) == false {
+			pkt.Data, _ = g.EncodeData("memeroy service stop")
+		} else {
+			memory, err := funcs.MemMetrics()
+			if err != nil {
+				//todo 获得内存失败咋个处理
+				log.Println(err)
+				return
+			}
+			pkt.Data, err = g.EncodeData(memory)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		err := a.GetCon().Write(pkt)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	})
 }
 func (m *MemoryService) Watcher() {
 	run := m.Status(nil)
@@ -105,4 +116,8 @@ func (m *MemoryService) Watcher() {
 	} else if m.CurrentStatus == "start" && run == false {
 		m.Start(map[string]string{})
 	}
+}
+func (m *MemoryService) Cancel() {
+	fmt.Println("!!mem cancel!!")
+	src.CancelTimer(m.timeId)
 }

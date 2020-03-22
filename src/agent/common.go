@@ -3,8 +3,6 @@ package agent
 import (
 	"github.com/back0893/goTcp/utils"
 	"net"
-	"strconv"
-	"time"
 )
 
 func ConnectServer(cfg string) (*net.TCPConn, error) {
@@ -19,14 +17,4 @@ func ConnectServer(cfg string) (*net.TCPConn, error) {
 		return nil, err
 	}
 	return con, nil
-}
-
-func GetInterval(args map[string]string, def time.Duration) time.Duration {
-	v, ok := args["interval"]
-	if ok {
-		if m, err := strconv.Atoi(v); err == nil {
-			return time.Duration(m)
-		}
-	}
-	return def
 }

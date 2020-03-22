@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"strings"
 )
 
 type service struct {
@@ -23,7 +24,7 @@ type ServicesList struct {
 func NewServicesList() *ServicesList {
 	//心跳的服务默认存在
 	return &ServicesList{
-		services:  map[string]iface.IService{"heart": services.NewHeartBeatService()},
+		services:  map[string]iface.IService{},
 		taskQueue: src.NewTaskQueue(),
 	}
 
@@ -37,6 +38,19 @@ func (sl *ServicesList) GetService(name string) (service iface.IService, ok bool
 }
 func (sl *ServicesList) GetServices() map[string]iface.IService {
 	return sl.services
+}
+func (sl *ServicesList) CancelService(name string) {
+	if service, ok := sl.services[name]; ok {
+		service.Cancel()
+	}
+	delete(sl.services, name)
+}
+func (sl *ServicesList) CancelAll() {
+	for name, _ := range sl.services {
+		service := sl.services[name]
+		service.Cancel()
+		delete(sl.services, name)
+	}
 }
 
 func (sl *ServicesList) WakeUp() error {
@@ -58,6 +72,9 @@ func (sl *ServicesList) WakeUp() error {
 		sl.AddService(se.Name, service)
 		fmt.Println(se.Name, se.CurrentStatus)
 	}
+	//唤醒后心跳必须存在
+	sl.CancelService("heart")
+	sl.AddService("heart", services.NewHeartBeatService())
 	return nil
 }
 func (sl *ServicesList) Sleep() error {
@@ -111,20 +128,14 @@ func (sl *ServicesList) Sync(data []byte) {
 		fmt.Println(err)
 		return
 	}
-	sync := make(map[string]iface.IService)
+	//中控下发的服务+本地已经存在的服务
 	for _, name := range ss {
-		if tmp, ok := sl.services[name]; ok == false {
+		if _, ok := sl.services[name]; ok == false {
 			fmt.Println("-------------------new service")
 			if service, err := sl.NewService(name); err == nil {
-				sync[name] = service
+				sl.AddService(name, service)
 			}
-		} else {
-			sync[name] = tmp
 		}
-	}
-	sl.services = sync
-	for name, s := range sl.services {
-		fmt.Println(name, s.GetCurrentStatus())
 	}
 }
 
@@ -140,6 +151,13 @@ func (sl *ServicesList) RunServiceAction() {
 
 		task := sl.taskQueue.Pop()
 		fmt.Print(task.Service)
+
+		//如果是一个取消服务的动作
+		if strings.ToLower(task.Action) == "cancel" {
+			sl.CancelService(task.Service)
+			return
+		}
+
 		service, ok = sl.GetService(task.Service)
 		fmt.Println("get=====>", ok)
 		fmt.Printf("%p\n", service)

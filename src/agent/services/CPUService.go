@@ -7,11 +7,16 @@ import (
 	"agent/src/g"
 	"github.com/back0893/goTcp/utils"
 	"log"
+	"time"
 )
 
 type CPUService struct {
 	CurrentStatus string
-	timeId        int64
+	timerId       int64
+}
+
+func (m *CPUService) Cancel() {
+	src.CancelTimer(m.timerId)
 }
 
 func (m *CPUService) GetCurrentStatus() string {
@@ -23,9 +28,11 @@ func (m *CPUService) SetCurrentStatus(status string) {
 }
 
 func NewCPUService() *CPUService {
-	return &CPUService{
+	s := &CPUService{
 		CurrentStatus: "start",
 	}
+	s.upload(map[string]string{})
+	return s
 }
 
 func (m *CPUService) Action(action string, args map[string]string) {
@@ -72,39 +79,47 @@ func (m *CPUService) Restart(args map[string]string) error {
 func (m CPUService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
 }
-func (m *CPUService) upload() {
-	pkt := src.NewPkt()
-	pkt.Id = g.CPU
+func (m *CPUService) upload(args map[string]string) {
+	if m.timerId != 0 {
+		src.CancelTimer(m.timerId)
+	}
+	interval := g.GetInterval(args, 30)
 
-	if m.Status(nil) == false {
-		pkt.Data, _ = g.EncodeData("cpu service stop")
-		return
-	} else {
-		if funcs.CpuPrepared() == false {
-			funcs.UpdateCpuStat()
+	m.timerId = src.AddTimer(interval*time.Second, func() {
+		pkt := src.NewPkt()
+		pkt.Id = g.CPU
+
+		if m.Status(nil) == false {
+			pkt.Data, _ = g.EncodeData("cpu service stop")
 			return
+		} else {
+			if funcs.CpuPrepared() == false {
+				funcs.UpdateCpuStat()
+				return
+			}
+
+			err := funcs.UpdateCpuStat()
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			cpu := funcs.CpuMetrics()
+			pkt.Data, err = g.EncodeData(cpu)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 		}
 
-		err := funcs.UpdateCpuStat()
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+		err := a.GetCon().Write(pkt)
 		if err != nil {
 			log.Println(err)
 			return
 		}
+	})
 
-		cpu := funcs.CpuMetrics()
-		pkt.Data, err = g.EncodeData(cpu)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err := a.GetCon().Write(pkt)
-	if err != nil {
-		log.Println(err)
-		return
-	}
 }
 func (m *CPUService) Watcher() {
 	run := m.Status(nil)

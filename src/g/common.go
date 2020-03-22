@@ -128,3 +128,13 @@ func Down(url, file string) error {
 	}
 	return nil
 }
+
+func GetInterval(args map[string]string, def time.Duration) time.Duration {
+	v, ok := args["interval"]
+	if ok {
+		if m, err := strconv.Atoi(v); err == nil {
+			return time.Duration(m)
+		}
+	}
+	return def
+}

@@ -2,13 +2,11 @@ package services
 
 import (
 	"agent/src"
-	"agent/src/agent"
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
-	"strconv"
 	"time"
 )
 
@@ -46,8 +44,8 @@ func (m *HeartBeatService) upload(args map[string]string) {
 		src.CancelTimer(m.timerId)
 	}
 
-	interval := agent.GetInterval(args, 5)
-
+	interval := g.GetInterval(args, 5)
+	fmt.Println("heart interval====>", interval*time.Second)
 	m.timerId = src.AddTimer(interval*time.Second, func() {
 		fmt.Println("ping")
 		pkt := src.NewPkt()
@@ -62,7 +60,7 @@ func NewHeartBeatService() *HeartBeatService {
 	s := &HeartBeatService{
 		CurrentStatus: "start",
 	}
-	s.Upload(map[string]string{})
+	s.upload(map[string]string{})
 	return s
 }
 
@@ -111,4 +109,8 @@ func (m *HeartBeatService) Restart(args map[string]string) error {
 
 func (m HeartBeatService) Status(map[string]string) bool {
 	return m.CurrentStatus == "start"
+}
+
+func (m *HeartBeatService) Cancel() {
+	src.CancelTimer(m.timerId)
 }

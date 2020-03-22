@@ -13,4 +13,5 @@ type IService interface {
 	Watcher()                                     //监控运行状态
 	GetCurrentStatus() string
 	SetCurrentStatus(string)
+	Cancel() //取消服务时执行的任务
 }
