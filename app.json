@@ -5,5 +5,15 @@
   "http": {
     "host": "0.0.0.0",
     "port": 9123
+  },
+  "db": {
+    "user": "epuser",
+    "password": "epuser@123-New",
+    "net": "tcp",
+    "addr": "106.75.138.97:3306",
+    "dbname": "ep",
+    "params": {
+      "charset": "utf8"
+    }
   }
 }
