@@ -12,34 +12,30 @@ import (
 	"strings"
 )
 
-type service struct {
-	Name          string
-	CurrentStatus string
-}
 type ServicesList struct {
-	services  map[string]iface.IService
+	services  map[int]iface.IService
 	taskQueue *src.TaskQueue
 }
 
 func NewServicesList() *ServicesList {
 	//心跳的服务默认存在
 	return &ServicesList{
-		services:  map[string]iface.IService{},
+		services:  map[int]iface.IService{},
 		taskQueue: src.NewTaskQueue(),
 	}
 
 }
-func (sl *ServicesList) AddService(name string, s iface.IService) {
+func (sl *ServicesList) AddService(name int, s iface.IService) {
 	sl.services[name] = s
 }
-func (sl *ServicesList) GetService(name string) (service iface.IService, ok bool) {
+func (sl *ServicesList) GetService(name int) (service iface.IService, ok bool) {
 	service, ok = sl.services[name]
 	return
 }
-func (sl *ServicesList) GetServices() map[string]iface.IService {
+func (sl *ServicesList) GetServices() map[int]iface.IService {
 	return sl.services
 }
-func (sl *ServicesList) CancelService(name string) {
+func (sl *ServicesList) CancelService(name int) {
 	if service, ok := sl.services[name]; ok {
 		service.Cancel()
 	}
@@ -52,38 +48,26 @@ func (sl *ServicesList) CancelAll() {
 		delete(sl.services, name)
 	}
 }
-
-func (sl *ServicesList) WakeUp() error {
+func (sl *ServicesList) HeartBeat() {
+	//心跳必须存在
+	sl.AddService(0, services.NewHeartBeatService())
+}
+func (sl *ServicesList) WakeUp() map[int]int {
 	path := g.GetRuntimePath()
+	t := make(map[int]int)
 	data, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", path, "services"))
 	if err != nil {
-		return err
+		return t
 	}
-	t := make([]service, 0)
 	if err := g.DecodeData(data, &t); err != nil {
-		return err
+		return t
 	}
-	for _, se := range t {
-		service, err := sl.NewService(se.Name)
-		if err != nil {
-			continue
-		}
-		service.SetCurrentStatus(se.CurrentStatus)
-		sl.AddService(se.Name, service)
-		fmt.Println(se.Name, se.CurrentStatus)
-	}
-	//唤醒后心跳必须存在
-	sl.CancelService("heart")
-	sl.AddService("heart", services.NewHeartBeatService())
-	return nil
+	return t
 }
 func (sl *ServicesList) Sleep() error {
-	t := make([]service, 0)
+	t := make(map[int]int)
 	for name, s := range sl.GetServices() {
-		t = append(t, service{
-			Name:          name,
-			CurrentStatus: s.GetCurrentStatus(),
-		})
+		t[name] = s.GetCurrentStatus()
 	}
 	path := g.GetRuntimePath()
 	data, err := g.EncodeData(t)
@@ -96,23 +80,21 @@ func (sl *ServicesList) Sleep() error {
 	return nil
 }
 
-func (sl *ServicesList) NewService(name string) (iface.IService, error) {
+func (sl *ServicesList) NewService(name, status int) (iface.IService, error) {
 	var service iface.IService
 	switch name {
 	case "redis":
-		service = services.NewRedisService()
-	case "heart":
-		service = services.NewHeartBeatService()
+		service = services.NewRedisService(status)
 	case "loadavg":
-		service = services.NewLoadAvgServiceService()
+		service = services.NewLoadAvgServiceService(status)
 	case "memory":
-		service = services.NewMemoryService()
+		service = services.NewMemoryService(status)
 	case "hhd":
-		service = services.NewHHDService()
+		service = services.NewHHDService(status)
 	case "port":
-		service = services.NewPortService()
+		service = services.NewPortService(status)
 	case "cpu":
-		service = services.NewCPUService()
+		service = services.NewCPUService(status)
 	default:
 		return nil, errors.New("服务还未被实现")
 	}
@@ -123,18 +105,20 @@ func (sl *ServicesList) NewService(name string) (iface.IService, error) {
 和从中控服务器下发的启动service同步
 */
 func (sl *ServicesList) Sync(data []byte) {
-	ss := make([]string, 0)
+	ss := make(map[int]int, 0)
 	if err := g.DecodeData(data, &ss); err != nil {
 		fmt.Println(err)
 		return
 	}
-	//中控下发的服务+本地已经存在的服务
-	for _, name := range ss {
-		if _, ok := sl.services[name]; ok == false {
-			fmt.Println("-------------------new service")
-			if service, err := sl.NewService(name); err == nil {
-				sl.AddService(name, service)
-			}
+	store := sl.WakeUp()
+	for name, status := range ss {
+		fmt.Println("-------------------new service")
+		t, ok := store[name]
+		if ok {
+			status = t
+		}
+		if service, err := sl.NewService(name, status); err == nil {
+			sl.AddService(name, service)
 		}
 	}
 }
@@ -145,10 +129,6 @@ func (sl *ServicesList) Sync(data []byte) {
 func (sl *ServicesList) RunServiceAction() {
 	//读取taskQueue,执行相应的操作
 	for {
-		var service iface.IService
-		var ok bool
-		var err error
-
 		task := sl.taskQueue.Pop()
 		fmt.Print(task.Service)
 
@@ -157,18 +137,10 @@ func (sl *ServicesList) RunServiceAction() {
 			sl.CancelService(task.Service)
 			return
 		}
-
-		service, ok = sl.GetService(task.Service)
-		fmt.Println("get=====>", ok)
-		fmt.Printf("%p\n", service)
-		fmt.Printf("%p\n", sl.services["redis"])
+		service, ok := sl.GetService(task.Service)
 		if ok == false {
-			service, err = sl.NewService(task.Service)
-			if err != nil {
-				//todo 服务未被实现
-				continue
-			}
-			sl.AddService(task.Service, service)
+			//todo 回应服务未启动?
+			return
 		}
 		fmt.Printf("%p\n", service)
 		service.Action(task.Action, task.Args)

@@ -4,6 +4,7 @@ import (
 	"agent/src"
 	"agent/src/g"
 	"agent/src/g/model"
+	serverModel "agent/src/server/model"
 	"context"
 	"fmt"
 	"github.com/back0893/goTcp/iface"
@@ -39,7 +40,27 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 
 		//用户登录成功
 		pkt.Id = g.ServicesList
-		pkt.Data, _ = g.EncodeData([]string{"redis", "heart"})
+		db, ok := DbConnections.Get("ep")
+		if !ok {
+			return
+		}
+
+		ccServer := serverModel.Server{}
+		if err := db.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
+			return
+		}
+		ccService := []*serverModel.Service{}
+		if err := db.Get(&ccServer, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
+			return
+		}
+
+		service := make(map[int]int)
+		for _, s := range ccService {
+			service[s.TemplateId] = s.Status
+		}
+
+		pkt.Data, _ = g.EncodeData(service)
+
 		connection.Write(pkt)
 
 	case g.PING:

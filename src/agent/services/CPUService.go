@@ -27,9 +27,9 @@ func (m *CPUService) SetCurrentStatus(status string) {
 	m.CurrentStatus = status
 }
 
-func NewCPUService() *CPUService {
+func NewCPUService(status string) *CPUService {
 	s := &CPUService{
-		CurrentStatus: "start",
+		CurrentStatus: status,
 	}
 	s.upload(map[string]string{})
 	return s

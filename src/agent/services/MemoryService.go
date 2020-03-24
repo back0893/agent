@@ -23,9 +23,9 @@ func (m *MemoryService) GetCurrentStatus() string {
 func (m *MemoryService) SetCurrentStatus(status string) {
 	m.CurrentStatus = status
 }
-func NewMemoryService() *MemoryService {
+func NewMemoryService(status string) *MemoryService {
 	s := &MemoryService{
-		CurrentStatus: "start",
+		CurrentStatus: status,
 	}
 	s.upload(map[string]string{})
 	return s

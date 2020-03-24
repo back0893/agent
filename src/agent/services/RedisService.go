@@ -32,9 +32,9 @@ func (r *RedisService) Status(map[string]string) bool {
 	return g.Status(g.ReadPid("./redisPid"))
 }
 
-func NewRedisService() *RedisService {
+func NewRedisService(status string) *RedisService {
 	s := &RedisService{
-		CurrentStatus: "start",
+		CurrentStatus: status,
 	}
 	s.upload(map[string]string{})
 	return s

@@ -25,10 +25,10 @@ func (m *PortService) GetCurrentStatus() string {
 func (m *PortService) SetCurrentStatus(status string) {
 	m.CurrentStatus = status
 }
-func NewPortService() *PortService {
+func NewPortService(status string) *PortService {
 	s := &PortService{
 		Ports:         []int64{},
-		CurrentStatus: "start",
+		CurrentStatus: status,
 	}
 	s.upload(map[string]string{})
 	return s

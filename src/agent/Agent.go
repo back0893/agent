@@ -128,7 +128,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	src.InitTimingWheel(agent.GetContext())
 
 	//初始化services列表
-	agent.servicesList.WakeUp()
+	agent.servicesList.HeartBeat()
 	//新增在结束时,保存
 	agent.AddClose(func(ctx context.Context, connection iface.IConnection) {
 		ctx.Value(g.AGENT).(*Agent).servicesList.Sleep()

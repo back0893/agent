@@ -15,9 +15,9 @@ type HHDService struct {
 	timeId        int64
 }
 
-func NewHHDService() *HHDService {
+func NewHHDService(status string) *HHDService {
 	s := &HHDService{
-		CurrentStatus: "start",
+		CurrentStatus: status,
 	}
 	s.upload(map[string]string{})
 	return s

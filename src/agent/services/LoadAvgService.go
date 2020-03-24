@@ -22,9 +22,9 @@ func (m *LoadAvgServiceService) GetCurrentStatus() string {
 func (m *LoadAvgServiceService) SetCurrentStatus(status string) {
 	m.CurrentStatus = status
 }
-func NewLoadAvgServiceService() *LoadAvgServiceService {
+func NewLoadAvgServiceService(status string) *LoadAvgServiceService {
 	s := &LoadAvgServiceService{
-		CurrentStatus: "start",
+		CurrentStatus: status,
 	}
 	s.upload(map[string]string{})
 	return s
