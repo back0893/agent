@@ -13,19 +13,19 @@ import (
 )
 
 type PortService struct {
-	CurrentStatus string
+	CurrentStatus int
 	Ports         []int64
 	timeId        int64
 }
 
-func (m *PortService) GetCurrentStatus() string {
+func (m *PortService) GetCurrentStatus() int {
 	return m.CurrentStatus
 }
 
-func (m *PortService) SetCurrentStatus(status string) {
+func (m *PortService) SetCurrentStatus(status int) {
 	m.CurrentStatus = status
 }
-func NewPortService(status string) *PortService {
+func NewPortService(status int) *PortService {
 	s := &PortService{
 		Ports:         []int64{},
 		CurrentStatus: status,
@@ -55,7 +55,7 @@ func (m *PortService) Action(action string, args map[string]string) {
 }
 
 func (m *PortService) Start(args map[string]string) error {
-	m.CurrentStatus = "start"
+	m.CurrentStatus = 1
 	for _, port := range strings.Split(args["ports"], ",") {
 		p, err := strconv.ParseInt(port, 10, 64)
 		if err != nil {
@@ -67,7 +67,7 @@ func (m *PortService) Start(args map[string]string) error {
 }
 
 func (m *PortService) Stop(map[string]string) error {
-	m.CurrentStatus = "stop"
+	m.CurrentStatus = 0
 	return nil
 }
 
@@ -82,7 +82,7 @@ func (m PortService) Restart(args map[string]string) error {
 }
 
 func (m PortService) Status(map[string]string) bool {
-	return m.CurrentStatus == "start"
+	return m.CurrentStatus == 1
 }
 func (m *PortService) upload(args map[string]string) {
 	if m.timeId != 0 {
@@ -119,9 +119,9 @@ func (m *PortService) upload(args map[string]string) {
 }
 func (m *PortService) Watcher() {
 	run := m.Status(nil)
-	if run == true && m.CurrentStatus == "end" {
-		m.CurrentStatus = "start"
-	} else if m.CurrentStatus == "start" && run == false {
+	if run == true && m.CurrentStatus == 0 {
+		m.CurrentStatus = 1
+	} else if m.CurrentStatus == 1 && run == false {
 		m.Start(map[string]string{})
 	}
 }

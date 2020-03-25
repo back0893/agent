@@ -16,15 +16,15 @@ import (
 */
 
 type HeartBeatService struct {
-	CurrentStatus string //当前配置的服务状态
-	timerId       int64  //定时上报的定时器id
+	CurrentStatus int   //当前配置的服务状态
+	timerId       int64 //定时上报的定时器id
 }
 
-func (m *HeartBeatService) GetCurrentStatus() string {
+func (m *HeartBeatService) GetCurrentStatus() int {
 	return m.CurrentStatus
 }
 
-func (m *HeartBeatService) SetCurrentStatus(status string) {
+func (m *HeartBeatService) SetCurrentStatus(status int) {
 	m.CurrentStatus = status
 }
 func (m *HeartBeatService) Watcher() {
@@ -58,7 +58,7 @@ func (m *HeartBeatService) upload(args map[string]string) {
 }
 func NewHeartBeatService() *HeartBeatService {
 	s := &HeartBeatService{
-		CurrentStatus: "start",
+		CurrentStatus: 1,
 	}
 	s.upload(map[string]string{})
 	return s
@@ -88,12 +88,12 @@ func (m *HeartBeatService) Action(action string, args map[string]string) {
 }
 
 func (m *HeartBeatService) Start(args map[string]string) error {
-	m.CurrentStatus = "start"
+	m.CurrentStatus = 1
 	return nil
 }
 
 func (m *HeartBeatService) Stop(map[string]string) error {
-	m.CurrentStatus = "stop"
+	m.CurrentStatus = 0
 	return nil
 }
 
@@ -108,7 +108,7 @@ func (m *HeartBeatService) Restart(args map[string]string) error {
 }
 
 func (m HeartBeatService) Status(map[string]string) bool {
-	return m.CurrentStatus == "start"
+	return m.CurrentStatus == 1
 }
 
 func (m *HeartBeatService) Cancel() {

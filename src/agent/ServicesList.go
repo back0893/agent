@@ -83,17 +83,17 @@ func (sl *ServicesList) Sleep() error {
 func (sl *ServicesList) NewService(name, status int) (iface.IService, error) {
 	var service iface.IService
 	switch name {
-	case "redis":
+	case g.REDISSERVICE:
 		service = services.NewRedisService(status)
-	case "loadavg":
+	case g.LOADAVGSERVICE:
 		service = services.NewLoadAvgServiceService(status)
-	case "memory":
+	case g.MEMORYSERVICE:
 		service = services.NewMemoryService(status)
-	case "hhd":
+	case g.HHDSERVICE:
 		service = services.NewHHDService(status)
-	case "port":
+	case g.PORTSERVICE:
 		service = services.NewPortService(status)
-	case "cpu":
+	case g.CPUSERVICE:
 		service = services.NewCPUService(status)
 	default:
 		return nil, errors.New("服务还未被实现")
@@ -111,6 +111,7 @@ func (sl *ServicesList) Sync(data []byte) {
 		return
 	}
 	store := sl.WakeUp()
+	fmt.Println(ss)
 	for name, status := range ss {
 		fmt.Println("-------------------new service")
 		t, ok := store[name]

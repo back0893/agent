@@ -11,18 +11,18 @@ import (
 )
 
 type LoadAvgServiceService struct {
-	CurrentStatus string
+	CurrentStatus int
 	timeId        int64
 }
 
-func (m *LoadAvgServiceService) GetCurrentStatus() string {
+func (m *LoadAvgServiceService) GetCurrentStatus() int {
 	return m.CurrentStatus
 }
 
-func (m *LoadAvgServiceService) SetCurrentStatus(status string) {
+func (m *LoadAvgServiceService) SetCurrentStatus(status int) {
 	m.CurrentStatus = status
 }
-func NewLoadAvgServiceService(status string) *LoadAvgServiceService {
+func NewLoadAvgServiceService(status int) *LoadAvgServiceService {
 	s := &LoadAvgServiceService{
 		CurrentStatus: status,
 	}
@@ -51,13 +51,13 @@ func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 }
 
 func (m *LoadAvgServiceService) Start(args map[string]string) error {
-	m.CurrentStatus = "start"
+	m.CurrentStatus = 0
 
 	return nil
 }
 
 func (m *LoadAvgServiceService) Stop(map[string]string) error {
-	m.CurrentStatus = "stop"
+	m.CurrentStatus = 1
 	return nil
 }
 
@@ -72,13 +72,13 @@ func (m *LoadAvgServiceService) Restart(args map[string]string) error {
 }
 
 func (m LoadAvgServiceService) Status(map[string]string) bool {
-	return m.CurrentStatus == "start"
+	return m.CurrentStatus == 1
 }
 func (m *LoadAvgServiceService) upload(args map[string]string) {
 	if m.timeId != 0 {
 		src.CancelTimer(m.timeId)
 	}
-	m.timeId = src.AddTimer(g.GetInterval(args, 30)*time.Second, func() {
+	m.timeId = src.AddTimer(g.GetInterval(args, 10)*time.Second, func() {
 		pkt := src.NewPkt()
 		pkt.Id = g.LoadAvg
 
@@ -109,9 +109,9 @@ func (m *LoadAvgServiceService) upload(args map[string]string) {
 }
 func (m *LoadAvgServiceService) Watcher() {
 	run := m.Status(nil)
-	if run == true && m.CurrentStatus == "end" {
-		m.CurrentStatus = "start"
-	} else if m.CurrentStatus == "start" && run == false {
+	if run == true && m.CurrentStatus == 0 {
+		m.CurrentStatus = 1
+	} else if m.CurrentStatus == 1 && run == false {
 		m.Start(map[string]string{})
 	}
 }

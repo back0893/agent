@@ -13,7 +13,7 @@ import (
 
 type action struct {
 	Agent   string            //发送给agent的名称
-	Service string            //发送的服务名称
+	Service int               //发送的服务名称
 	Action  string            //服务对应的动作
 	Args    map[string]string //对应的传递参数
 }

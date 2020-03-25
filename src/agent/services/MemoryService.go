@@ -12,18 +12,18 @@ import (
 )
 
 type MemoryService struct {
-	CurrentStatus string
+	CurrentStatus int
 	timeId        int64
 }
 
-func (m *MemoryService) GetCurrentStatus() string {
+func (m *MemoryService) GetCurrentStatus() int {
 	return m.CurrentStatus
 }
 
-func (m *MemoryService) SetCurrentStatus(status string) {
+func (m *MemoryService) SetCurrentStatus(status int) {
 	m.CurrentStatus = status
 }
-func NewMemoryService(status string) *MemoryService {
+func NewMemoryService(status int) *MemoryService {
 	s := &MemoryService{
 		CurrentStatus: status,
 	}
@@ -55,12 +55,12 @@ func (m *MemoryService) Action(action string, args map[string]string) {
 }
 
 func (m *MemoryService) Start(args map[string]string) error {
-	m.CurrentStatus = "start"
+	m.CurrentStatus = 1
 	return nil
 }
 
 func (m *MemoryService) Stop(map[string]string) error {
-	m.CurrentStatus = "stop"
+	m.CurrentStatus = 0
 	return nil
 }
 
@@ -75,7 +75,7 @@ func (m MemoryService) Restart(args map[string]string) error {
 }
 
 func (m MemoryService) Status(map[string]string) bool {
-	return m.CurrentStatus == "start"
+	return m.CurrentStatus == 1
 }
 func (m *MemoryService) upload(args map[string]string) {
 	if m.timeId != 0 {
@@ -111,9 +111,9 @@ func (m *MemoryService) upload(args map[string]string) {
 }
 func (m *MemoryService) Watcher() {
 	run := m.Status(nil)
-	if run == true && m.CurrentStatus == "end" {
-		m.CurrentStatus = "start"
-	} else if m.CurrentStatus == "start" && run == false {
+	if run == true && m.CurrentStatus == 0 {
+		m.CurrentStatus = 1
+	} else if m.CurrentStatus == 1 && run == false {
 		m.Start(map[string]string{})
 	}
 }

@@ -11,7 +11,7 @@ import (
 )
 
 type CPUService struct {
-	CurrentStatus string
+	CurrentStatus int
 	timerId       int64
 }
 
@@ -19,15 +19,15 @@ func (m *CPUService) Cancel() {
 	src.CancelTimer(m.timerId)
 }
 
-func (m *CPUService) GetCurrentStatus() string {
+func (m *CPUService) GetCurrentStatus() int {
 	return m.CurrentStatus
 }
 
-func (m *CPUService) SetCurrentStatus(status string) {
+func (m *CPUService) SetCurrentStatus(status int) {
 	m.CurrentStatus = status
 }
 
-func NewCPUService(status string) *CPUService {
+func NewCPUService(status int) *CPUService {
 	s := &CPUService{
 		CurrentStatus: status,
 	}
@@ -57,12 +57,12 @@ func (m *CPUService) Action(action string, args map[string]string) {
 }
 
 func (m *CPUService) Start(args map[string]string) error {
-	m.CurrentStatus = "start"
+	m.CurrentStatus = 1
 	return nil
 }
 
 func (m *CPUService) Stop(map[string]string) error {
-	m.CurrentStatus = "stop"
+	m.CurrentStatus = 0
 	return nil
 }
 
@@ -77,7 +77,7 @@ func (m *CPUService) Restart(args map[string]string) error {
 }
 
 func (m CPUService) Status(map[string]string) bool {
-	return m.CurrentStatus == "start"
+	return m.CurrentStatus == 1
 }
 func (m *CPUService) upload(args map[string]string) {
 	if m.timerId != 0 {
@@ -123,9 +123,9 @@ func (m *CPUService) upload(args map[string]string) {
 }
 func (m *CPUService) Watcher() {
 	run := m.Status(nil)
-	if run == true && m.CurrentStatus == "end" {
-		m.CurrentStatus = "start"
-	} else if m.CurrentStatus == "start" && run == false {
+	if run == true && m.CurrentStatus == 0 {
+		m.CurrentStatus = 1
+	} else if m.CurrentStatus == 1 && run == false {
 		m.Start(map[string]string{})
 	}
 }

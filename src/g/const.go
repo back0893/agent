@@ -25,4 +25,15 @@ const (
 	AGENT string = "agent"
 	//全局产量,当前agent的版本
 	VERSION = 2
+
+	/**
+	下发的service的id映射服务
+	*/
+
+	REDISSERVICE   = 1
+	LOADAVGSERVICE = 2
+	MEMORYSERVICE  = 3
+	HHDSERVICE     = 4
+	PORTSERVICE    = 5
+	CPUSERVICE     = 6
 )

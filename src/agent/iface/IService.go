@@ -12,6 +12,6 @@ type IService interface {
 	Action(action string, args map[string]string) //用来执行相应的动作
 	Watcher()                                     //监控运行状态
 	GetCurrentStatus() int
-	SetCurrentStatus(string)
+	SetCurrentStatus(int)
 	Cancel() //取消服务时执行的任务
 }

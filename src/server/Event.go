@@ -42,15 +42,17 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		pkt.Id = g.ServicesList
 		db, ok := DbConnections.Get("ep")
 		if !ok {
+			fmt.Println("db false")
 			return
 		}
-
+		fmt.Println("db ok")
 		ccServer := serverModel.Server{}
 		if err := db.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
 			return
 		}
 		ccService := []*serverModel.Service{}
-		if err := db.Get(&ccServer, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
+		if err := db.Select(&ccService, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
+			fmt.Println(err)
 			return
 		}
 
@@ -58,7 +60,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		for _, s := range ccService {
 			service[s.TemplateId] = s.Status
 		}
-
+		fmt.Println(service)
 		pkt.Data, _ = g.EncodeData(service)
 
 		connection.Write(pkt)

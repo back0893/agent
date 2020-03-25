@@ -11,22 +11,22 @@ import (
 )
 
 type HHDService struct {
-	CurrentStatus string
+	CurrentStatus int
 	timeId        int64
 }
 
-func NewHHDService(status string) *HHDService {
+func NewHHDService(status int) *HHDService {
 	s := &HHDService{
 		CurrentStatus: status,
 	}
 	s.upload(map[string]string{})
 	return s
 }
-func (m *HHDService) GetCurrentStatus() string {
+func (m *HHDService) GetCurrentStatus() int {
 	return m.CurrentStatus
 }
 
-func (m *HHDService) SetCurrentStatus(status string) {
+func (m *HHDService) SetCurrentStatus(status int) {
 	m.CurrentStatus = status
 }
 func (m *HHDService) Action(action string, args map[string]string) {
@@ -51,12 +51,12 @@ func (m *HHDService) Action(action string, args map[string]string) {
 }
 
 func (m *HHDService) Start(args map[string]string) error {
-	m.CurrentStatus = "start"
+	m.CurrentStatus = 1
 	return nil
 }
 
 func (m *HHDService) Stop(map[string]string) error {
-	m.CurrentStatus = "stop"
+	m.CurrentStatus = 0
 	return nil
 }
 
@@ -71,7 +71,7 @@ func (m HHDService) Restart(args map[string]string) error {
 }
 
 func (m HHDService) Status(map[string]string) bool {
-	return m.CurrentStatus == "start"
+	return m.CurrentStatus == 1
 }
 func (m *HHDService) upload(args map[string]string) {
 	if m.timeId != 0 {
@@ -109,9 +109,9 @@ func (m *HHDService) upload(args map[string]string) {
 }
 func (m *HHDService) Watcher() {
 	run := m.Status(nil)
-	if run == true && m.CurrentStatus == "end" {
-		m.CurrentStatus = "start"
-	} else if m.CurrentStatus == "start" && run == false {
+	if run == true && m.CurrentStatus == 0 {
+		m.CurrentStatus = 1
+	} else if m.CurrentStatus == 1 && run == false {
 		m.Start(map[string]string{})
 	}
 }
