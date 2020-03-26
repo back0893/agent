@@ -27,7 +27,6 @@ func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 
 func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*src.Packet)
-	fmt.Println(pkt.Id)
 	switch pkt.Id {
 	case g.Auth:
 		var auth model.Auth
@@ -38,11 +37,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		}
 
 		log.Printf("agent登录,登录用户:%s\n", auth.Username)
-		db, ok := DbConnections.Get("ep")
-		if !ok {
-			fmt.Println("db false")
-			return
-		}
+		db, _ := DbConnections.Get("ep")
 		ccServer := serverModel.Server{}
 		if err := db.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
 			return
@@ -74,7 +69,6 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		if err := g.DecodeData(pkt.Data, service); err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(service.Service)
 		switch service.Service {
 		case g.BaseServerInfo:
 			var cpu model.Cpu
@@ -83,6 +77,16 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			if err := g.DecodeData(service.Info, &cpu, &mem, &loadAvgs); err != nil {
 				log.Println("读取信息失败")
 				break
+			}
+			tmp, _ := connection.GetExtraData("auth")
+			auth := tmp.(*model.Auth)
+			db, _ := DbConnections.Get("ep")
+			memBusy := (mem.Used * 10000 / mem.Total) / 100
+			if _, err := db.Exec("insert cc_server_log (server_id,ram,cpu_usage_ratio,ram_usage_ratio) values (?,?,?,?)", auth.Id, float64(mem.Total)/(1024*1024), cpu.Busy, memBusy); err != nil {
+				fmt.Println(err.Error())
+			}
+			if _, err := db.Query("update cc_server set cpu_usage_ratio=?,ram_usage_ratio=? where id=?", cpu.Busy, memBusy, auth.Id); err != nil {
+				fmt.Println(err.Error())
 			}
 			log.Printf("cpu目前负载%.2f,闲置%.2f\n", cpu.Busy, cpu.Idle)
 			log.Printf("内存大小%.2fMB,已经使用%.2fMB\n", float64(mem.Total)/(1024*1024), float64(mem.Used)/(1024*1024))
