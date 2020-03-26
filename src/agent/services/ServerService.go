@@ -6,6 +6,7 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"agent/src/g/model"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"log"
 	"time"
@@ -20,7 +21,9 @@ type ServerService struct {
 }
 
 func NewServerService(status int) *ServerService {
-	return &ServerService{CurrentStatus: status}
+	s := &ServerService{CurrentStatus: status}
+	s.Upload(map[string]string{})
+	return s
 }
 
 func (s *ServerService) Start(args map[string]string) error {
@@ -94,49 +97,54 @@ func (s *ServerService) Cancel() {
 func (s *ServerService) info() {
 	//使用当前服务的状态作为默认值
 	//如果启动失败,那么把状态修改成失败
-	info := model.NewServiceResponse(g.CPUMEM, s.CurrentStatus)
-	if s.Status(nil) == false {
-		info.Status = 0
-		//todo 如果是启动失败,把失败的原因通知
-		info.Info = "启动失败"
-	} else {
-		//获得cpu信息
-		if funcs.CpuPrepared() == false {
-			funcs.UpdateCpuStat()
-		}
-		err := funcs.UpdateCpuStat()
-		if err != nil {
-			info.Info = err.Error()
-			return
-		}
-		cpu := funcs.CpuMetrics()
+	fmt.Println("======")
+	info := model.NewServiceResponse(g.BaseServerInfo, s.CurrentStatus)
 
-		//获得内存
-		mem, err := funcs.MemMetrics()
-		if err != nil {
-			return
-		}
-
-		//获得负载
-		loadAvg, err := funcs.LoadAvgMetrics()
-		if err != nil {
-			return
-		}
-		info.Info = map[string]interface{}{"cpu": cpu, "mem": mem, "loadAvg": loadAvg}
+	//获得cpu信息
+	if funcs.CpuPrepared() == false {
+		funcs.UpdateCpuStat()
 	}
+	err := funcs.UpdateCpuStat()
+	if err != nil {
+		info.Info = []byte("获得cpu失败")
+		return
+	}
+	cpu := funcs.CpuMetrics()
+
+	//获得内存
+	mem, err := funcs.MemMetrics()
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+
+	//获得负载
+	loadAvg, err := funcs.LoadAvgMetrics()
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+
+	data, err := g.EncodeData(cpu, mem, loadAvg)
+	if err != nil {
+		fmt.Print(err)
+		return
+	}
+	info.Info = data
 	pkt := src.ServiceResponsePkt(info)
 	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err := a.GetCon().Write(pkt)
+	err = a.GetCon().Write(pkt)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	fmt.Println("sned ok")
 }
 
 func (s *ServerService) Upload(args map[string]string) {
 	if s.timerId != 0 {
 		src.CancelTimer(s.timerId)
 	}
-	interval := g.GetInterval(args, 30)
+	interval := g.GetInterval(args, 5)
 	s.timerId = src.AddTimer(interval*time.Second, s.info)
 }

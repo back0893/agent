@@ -3,6 +3,7 @@ package agent
 import (
 	"agent/src/g"
 	model2 "agent/src/g/model"
+	"errors"
 	"fmt"
 	"os"
 )
@@ -34,9 +35,9 @@ func NewUpdate(filename string) *UpdateCommand {
 
 func (uc *UpdateCommand) Do(Info *model2.UpdateInfo) error {
 	//版本小于当前的版本号
-	//if Info.Version<=g.VERSION{
-	//	return errors.New("不能回退版本")
-	//}
+	if Info.Version <= g.VERSION {
+		return errors.New("不能回退版本")
+	}
 	newFile := uc.GetNewFilename()
 	currentFile := uc.GetFilename()
 	oldFile := uc.GetOldIFilename()

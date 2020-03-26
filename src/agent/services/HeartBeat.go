@@ -61,48 +61,17 @@ func NewHeartBeatService() *HeartBeatService {
 }
 
 func (m *HeartBeatService) Action(action string, args map[string]string) {
-	pkt := src.NewPkt()
-	pkt.Id = g.ServiceResponse
-	switch action {
-	case "start":
-		m.Start(args)
-	case "stop":
-		m.Stop(args)
-	case "restart":
-		m.Restart(args)
-	case "status":
-		m.Status(args)
-	case "interval":
-		m.Upload(args)
-	}
-	pkt.Data = []byte("!启动心跳!")
-	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err := a.GetCon().Write(pkt)
-	if err != nil {
-		//todo 发送失败..应该有后续操作
-	}
 }
 
 func (m *HeartBeatService) Start(args map[string]string) error {
-	if m.Status(nil) {
-		return nil
-	}
-	m.CurrentStatus = 1
 	return nil
 }
 
 func (m *HeartBeatService) Stop(map[string]string) error {
-	m.CurrentStatus = 0
 	return nil
 }
 
 func (m *HeartBeatService) Restart(args map[string]string) error {
-	if err := m.Stop(args); err != nil {
-		return err
-	}
-	if err := m.Start(args); err != nil {
-		return err
-	}
 	return nil
 }
 

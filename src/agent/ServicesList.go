@@ -51,7 +51,9 @@ func (sl *ServicesList) CancelAll() {
 func (sl *ServicesList) BaseService() {
 	//心跳必须存在
 	sl.AddService(g.PING, services.NewHeartBeatService())
-	sl.AddService(g.CPUMEM, services.NewServerService(1))
+	sl.AddService(g.BaseServerInfo, services.NewServerService(1))
+	sl.AddService(g.HHD, services.NewHHDService(1))
+	//sl.AddService(g.PortListen,services.NewPortService(1))
 }
 func (sl *ServicesList) WakeUp() map[int]int {
 	path := g.GetRuntimePath()
@@ -86,16 +88,6 @@ func (sl *ServicesList) NewService(name, status int) (iface.IService, error) {
 	switch name {
 	case g.REDISSERVICE:
 		service = services.NewRedisService(status)
-	case g.LOADAVGSERVICE:
-		service = services.NewLoadAvgServiceService(status)
-	case g.MEMORYSERVICE:
-		service = services.NewMemoryService(status)
-	case g.HHDSERVICE:
-		service = services.NewHHDService(status)
-	case g.PORTSERVICE:
-		service = services.NewPortService(status)
-	case g.CPUSERVICE:
-		service = services.NewCPUService(status)
 	default:
 		return nil, errors.New("服务还未被实现")
 	}

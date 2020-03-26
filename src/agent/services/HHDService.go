@@ -39,7 +39,7 @@ func (m *HHDService) Action(action string, args map[string]string) {
 	case "restart":
 		m.Restart(args)
 	case "status":
-		m.Status(args)
+		m.info()
 	}
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
@@ -79,21 +79,16 @@ func (m HHDService) Status(map[string]string) bool {
 }
 func (m HHDService) info() {
 	info := model.NewServiceResponse(g.HHD, m.CurrentStatus)
-	if m.Status(nil) == false {
-		info.Status = 0
-		info.Info = "启动失败"
-	} else {
-		disks, err := funcs.DiskUseMetrics()
-		if err != nil {
-			//todo 获得失败咋个处理
-			log.Println(err)
-			return
-		}
-		info.Info = disks
+	disks, err := funcs.DiskUseMetrics()
+	if err != nil {
+		//todo 获得失败咋个处理
+		log.Println(err)
+		return
 	}
+	info.Info, err = g.EncodeData(disks)
 	pkt := src.ServiceResponsePkt(info)
 	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-	err := a.GetCon().Write(pkt)
+	err = a.GetCon().Write(pkt)
 	if err != nil {
 		log.Println(err)
 		return

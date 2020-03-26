@@ -118,10 +118,15 @@ func (r *RedisService) Action(action string, args map[string]string) {
 	}
 }
 
-func info() {
-	info := model.NewServiceResponse(g.REDISSERVICE)
-	pkt := src.NewPkt()
-	pkt.Id = g.ServiceResponse
+func (r *RedisService) info() {
+	info := model.NewServiceResponse(g.REDISSERVICE, r.CurrentStatus)
+	if r.Status(nil) {
+		info.Status = 0
+		info.Info = []byte("停止服务")
+	} else {
+		info.Info = []byte("redis启动中")
+	}
+	pkt := src.ServiceResponsePkt(info)
 	//todo 收集redis的信息
 	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 	if err := a.GetCon().Write(pkt); err != nil {

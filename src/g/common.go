@@ -37,20 +37,24 @@ func GetCon(s iface.IServer, username string) (con iface.IConnection, has bool) 
 	return con, has
 }
 
-func EncodeData(e interface{}) ([]byte, error) {
+func EncodeData(e ...interface{}) ([]byte, error) {
 	buffer := bytes.NewBuffer([]byte{})
 	encoder := gob.NewEncoder(buffer)
-	if err := encoder.Encode(e); err != nil {
-		return nil, err
+	for _, tmp := range e {
+		if err := encoder.Encode(tmp); err != nil {
+			return nil, err
+		}
 	}
 	return buffer.Bytes(), nil
 }
 
-func DecodeData(data []byte, e interface{}) error {
+func DecodeData(data []byte, e ...interface{}) error {
 	buffer := bytes.NewReader(data)
 	decoder := gob.NewDecoder(buffer)
-	if err := decoder.Decode(e); err != nil {
-		return err
+	for _, tmp := range e {
+		if err := decoder.Decode(tmp); err != nil {
+			return err
+		}
 	}
 	return nil
 }

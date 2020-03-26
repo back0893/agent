@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"agent/src/g/model"
 	"github.com/back0893/goTcp/utils"
 	"log"
 	"strconv"
@@ -41,8 +42,8 @@ func (m *PortService) Action(action string, args map[string]string) {
 		m.Stop(args)
 	case "restart":
 		m.Restart(args)
-	case "status":
-		m.Status(args)
+	case "listen":
+		m.Ports = m.SplitPort(args)
 	}
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
@@ -53,19 +54,27 @@ func (m *PortService) Action(action string, args map[string]string) {
 		//todo 发送失败..应该有后续操作
 	}
 }
-
+func (m *PortService) SplitPort(args map[string]string) []int64 {
+	portSlice := make([]int64, 0)
+	ports, ok := args["ports"]
+	if ok == false {
+		return portSlice
+	}
+	for _, port := range strings.Split(ports, ",") {
+		p, err := strconv.ParseInt(port, 10, 64)
+		if err != nil {
+			continue
+		}
+		portSlice = append(portSlice, p)
+	}
+	return portSlice
+}
 func (m *PortService) Start(args map[string]string) error {
 	if m.Status(nil) {
 		return nil
 	}
 	m.CurrentStatus = 1
-	for _, port := range strings.Split(args["ports"], ",") {
-		p, err := strconv.ParseInt(port, 10, 64)
-		if err != nil {
-			continue
-		}
-		m.Ports = append(m.Ports, p)
-	}
+	m.Ports = m.SplitPort(args)
 	return nil
 }
 
@@ -87,37 +96,36 @@ func (m PortService) Restart(args map[string]string) error {
 func (m PortService) Status(map[string]string) bool {
 	return m.CurrentStatus == 1
 }
+func (m PortService) info(args map[string]string) {
+	info := model.NewServiceResponse(g.PortListen, m.CurrentStatus)
+	portListen := m.Ports
+	if args != nil {
+		portListen = m.SplitPort(args)
+	}
+	if len(portListen) == 0 {
+		return
+	}
+	result, err := funcs.ListenTcpPortMetrics(portListen...)
+	if err != nil {
+		//todo 获得失败咋个处理
+		log.Println(err)
+		return
+	}
+	info.Info, err = g.EncodeData(result)
+	pkt := src.ServiceResponsePkt(info)
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err = a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
 func (m *PortService) Upload(args map[string]string) {
 	if m.timeId != 0 {
 		src.CancelTimer(m.timeId)
 	}
 	m.timeId = src.AddTimer(g.GetInterval(args, 30)*time.Second, func() {
-		pkt := src.NewPkt()
-		pkt.Id = g.PortListen
-
-		if m.Status(nil) == false {
-			pkt.Data, _ = g.EncodeData("port service stop")
-			return
-		} else {
-			ports, err := funcs.ListenTcpPortMetrics(m.Ports...)
-			if err != nil {
-				//todo 获得内存失败咋个处理
-				log.Println(err)
-				return
-			}
-			pkt.Data, err = g.EncodeData(ports)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-		}
-
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		err := a.GetCon().Write(pkt)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		m.info(nil)
 	})
 }
 func (m *PortService) Watcher() {
