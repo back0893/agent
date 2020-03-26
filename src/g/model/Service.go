@@ -13,3 +13,16 @@ func NewService(service int, action string, args map[string]string) *Service {
 		Args:    args,
 	}
 }
+
+type ServiceResponse struct {
+	Service int
+	Status  int
+	Info    interface{} //每个服务返回的值,响应的服务自己处理
+}
+
+func NewServiceResponse(service, status int) *ServiceResponse {
+	return &ServiceResponse{
+		Service: service,
+		Status:  status,
+	}
+}

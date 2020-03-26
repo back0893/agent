@@ -27,7 +27,7 @@ func NewMemoryService(status int) *MemoryService {
 	s := &MemoryService{
 		CurrentStatus: status,
 	}
-	s.upload(map[string]string{})
+	s.Upload(map[string]string{})
 	return s
 }
 
@@ -55,6 +55,9 @@ func (m *MemoryService) Action(action string, args map[string]string) {
 }
 
 func (m *MemoryService) Start(args map[string]string) error {
+	if m.Status(nil) {
+		return nil
+	}
 	m.CurrentStatus = 1
 	return nil
 }
@@ -77,14 +80,14 @@ func (m MemoryService) Restart(args map[string]string) error {
 func (m MemoryService) Status(map[string]string) bool {
 	return m.CurrentStatus == 1
 }
-func (m *MemoryService) upload(args map[string]string) {
+func (m *MemoryService) Upload(args map[string]string) {
 	if m.timeId != 0 {
 		src.CancelTimer(m.timeId)
 	}
 
 	m.timeId = src.AddTimer(g.GetInterval(args, 30)*time.Second, func() {
 		pkt := src.NewPkt()
-		pkt.Id = g.MEM
+		pkt.Id = 999
 		if m.Status(nil) == false {
 			pkt.Data, _ = g.EncodeData("memeroy service stop")
 		} else {

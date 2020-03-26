@@ -11,9 +11,8 @@ const (
 	Response     = 99 //通用回应
 
 	Auth         = 100 //身份识别
-	CPU          = 101 //cpu使用
+	CPUMEM       = 101 //cpu使用
 	HHD          = 102 //硬盘使用
-	MEM          = 103 //内存使用
 	LoadAvg      = 104 //负载
 	PortListen   = 105 //端口监听情况
 	ServicesList = 106 //下发默认启动服务
@@ -29,11 +28,5 @@ const (
 	/**
 	下发的service的id映射服务
 	*/
-
-	REDISSERVICE   = 1
-	LOADAVGSERVICE = 2
-	MEMORYSERVICE  = 3
-	HHDSERVICE     = 4
-	PORTSERVICE    = 5
-	CPUSERVICE     = 6
+	REDISSERVICE = 1
 )

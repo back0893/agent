@@ -4,6 +4,7 @@ import (
 	"agent/src"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"agent/src/g/model"
 	"errors"
 	"fmt"
 	"github.com/back0893/goTcp/utils"
@@ -35,13 +36,13 @@ func NewRedisService(status int) *RedisService {
 	s := &RedisService{
 		CurrentStatus: status,
 	}
-	s.upload(map[string]string{})
+	s.Upload(map[string]string{})
 	return s
 }
 
 func (r *RedisService) Start(args map[string]string) error {
 	if g.Status(g.ReadPid("./redisPid")) {
-		return errors.New("redis已经运行")
+		return nil
 	}
 	r.CurrentStatus = 1
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./redisPid")
@@ -117,24 +118,25 @@ func (r *RedisService) Action(action string, args map[string]string) {
 	}
 }
 
-func (r *RedisService) upload(args map[string]string) {
+func info() {
+	info := model.NewServiceResponse(g.REDISSERVICE)
+	pkt := src.NewPkt()
+	pkt.Id = g.ServiceResponse
+	//todo 收集redis的信息
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	if err := a.GetCon().Write(pkt); err != nil {
+		log.Println(err)
+	}
+}
+func (r *RedisService) Upload(args map[string]string) {
 	fmt.Println("redis")
 	if r.timerId != 0 {
 		src.CancelTimer(r.timerId)
 	}
 
 	interval := g.GetInterval(args, 12)
-	fmt.Println("redis interval====>", interval*time.Second)
 	r.timerId = src.AddTimer(interval*time.Second, func() {
-		fmt.Println("redis")
-		pkt := src.NewPkt()
-		pkt.Id = g.ServiceResponse
-		//todo 收集redis的信息
-		pkt.Data = []byte(fmt.Sprintf("redis status====>%v", r.Status(nil)))
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		if err := a.GetCon().Write(pkt); err != nil {
-			log.Println(err)
-		}
+
 	})
 }
 func (r *RedisService) Watcher() {
@@ -145,6 +147,6 @@ func (r *RedisService) Watcher() {
 		r.Start(map[string]string{})
 	}
 }
-func (m *RedisService) Cancel() {
-	src.CancelTimer(m.timerId)
+func (r *RedisService) Cancel() {
+	src.CancelTimer(r.timerId)
 }

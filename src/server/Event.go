@@ -35,32 +35,32 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			connection.Close()
 			return
 		}
-		connection.SetExtraData("auth", &auth)
-		log.Printf("agent登录,登录用户:%s\n", auth.Username)
 
-		//用户登录成功
-		pkt.Id = g.ServicesList
+		log.Printf("agent登录,登录用户:%s\n", auth.Username)
 		db, ok := DbConnections.Get("ep")
 		if !ok {
 			fmt.Println("db false")
 			return
 		}
-		fmt.Println("db ok")
 		ccServer := serverModel.Server{}
 		if err := db.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
 			return
 		}
+		auth.Id = ccServer.Id
 		ccService := []*serverModel.Service{}
 		if err := db.Select(&ccService, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
 			fmt.Println(err)
 			return
 		}
+		connection.SetExtraData("auth", &auth)
 
 		service := make(map[int]int)
 		for _, s := range ccService {
 			service[s.TemplateId] = s.Status
 		}
-		fmt.Println(service)
+		//用户登录成功
+		pkt.Id = g.ServicesList
+
 		pkt.Data, _ = g.EncodeData(service)
 
 		connection.Write(pkt)
@@ -68,7 +68,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 	case g.PING:
 		e.SetTimeout(connection)
 		log.Println("心跳")
-	case g.CPU:
+	case g.CPUMEM:
 		var cpu model.Cpu
 		if err := g.DecodeData(pkt.Data, &cpu); err != nil {
 			log.Println("读取cpu信息失败")

@@ -30,9 +30,7 @@ func (a Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 
 func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
 	pkt := packet.(*src.Packet)
-	log.Println(pkt.Id)
 	switch pkt.Id {
-
 	case g.Service:
 		//服务状态,服务被推动到消息队列中
 		service := &model.Service{}

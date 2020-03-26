@@ -48,9 +48,10 @@ func (sl *ServicesList) CancelAll() {
 		delete(sl.services, name)
 	}
 }
-func (sl *ServicesList) HeartBeat() {
+func (sl *ServicesList) BaseService() {
 	//心跳必须存在
-	sl.AddService(0, services.NewHeartBeatService())
+	sl.AddService(g.PING, services.NewHeartBeatService())
+	sl.AddService(g.CPUMEM, services.NewServerService(1))
 }
 func (sl *ServicesList) WakeUp() map[int]int {
 	path := g.GetRuntimePath()
@@ -111,9 +112,7 @@ func (sl *ServicesList) Sync(data []byte) {
 		return
 	}
 	store := sl.WakeUp()
-	fmt.Println(ss)
 	for name, status := range ss {
-		fmt.Println("-------------------new service")
 		t, ok := store[name]
 		if ok {
 			status = t
@@ -141,7 +140,13 @@ func (sl *ServicesList) RunServiceAction() {
 		service, ok := sl.GetService(task.Service)
 		if ok == false {
 			//todo 回应服务未启动?
-			return
+			fmt.Println("当前服务临时启动...")
+			var err error
+			service, err = sl.NewService(task.Service, 1)
+			if err != nil {
+				fmt.Println("启动服务失败...")
+				return
+			}
 		}
 		fmt.Printf("%p\n", service)
 		service.Action(task.Action, task.Args)

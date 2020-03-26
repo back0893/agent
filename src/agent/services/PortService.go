@@ -30,7 +30,7 @@ func NewPortService(status int) *PortService {
 		Ports:         []int64{},
 		CurrentStatus: status,
 	}
-	s.upload(map[string]string{})
+	s.Upload(map[string]string{})
 	return s
 }
 func (m *PortService) Action(action string, args map[string]string) {
@@ -55,6 +55,9 @@ func (m *PortService) Action(action string, args map[string]string) {
 }
 
 func (m *PortService) Start(args map[string]string) error {
+	if m.Status(nil) {
+		return nil
+	}
 	m.CurrentStatus = 1
 	for _, port := range strings.Split(args["ports"], ",") {
 		p, err := strconv.ParseInt(port, 10, 64)
@@ -84,7 +87,7 @@ func (m PortService) Restart(args map[string]string) error {
 func (m PortService) Status(map[string]string) bool {
 	return m.CurrentStatus == 1
 }
-func (m *PortService) upload(args map[string]string) {
+func (m *PortService) Upload(args map[string]string) {
 	if m.timeId != 0 {
 		src.CancelTimer(m.timeId)
 	}

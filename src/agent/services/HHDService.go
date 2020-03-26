@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"agent/src/g/model"
 	"github.com/back0893/goTcp/utils"
 	"log"
 	"time"
@@ -19,7 +20,7 @@ func NewHHDService(status int) *HHDService {
 	s := &HHDService{
 		CurrentStatus: status,
 	}
-	s.upload(map[string]string{})
+	s.Upload(map[string]string{})
 	return s
 }
 func (m *HHDService) GetCurrentStatus() int {
@@ -51,6 +52,9 @@ func (m *HHDService) Action(action string, args map[string]string) {
 }
 
 func (m *HHDService) Start(args map[string]string) error {
+	if m.Status(nil) {
+		return nil
+	}
 	m.CurrentStatus = 1
 	return nil
 }
@@ -73,39 +77,34 @@ func (m HHDService) Restart(args map[string]string) error {
 func (m HHDService) Status(map[string]string) bool {
 	return m.CurrentStatus == 1
 }
-func (m *HHDService) upload(args map[string]string) {
-	if m.timeId != 0 {
-		src.CancelTimer(m.timeId)
-	}
-	interval := g.GetInterval(args, 30)
-	m.timeId = src.AddTimer(interval*time.Second, func() {
-		pkt := src.NewPkt()
-		pkt.Id = g.HHD
-
-		if m.Status(nil) == false {
-			pkt.Data, _ = g.EncodeData("hhd service stop")
-		} else {
-			disks, err := funcs.DiskUseMetrics()
-			if err != nil {
-				//todo 获得内存失败咋个处理
-				log.Println(err)
-				return
-			}
-
-			pkt.Data, err = g.EncodeData(disks)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-		}
-
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		err := a.GetCon().Write(pkt)
+func (m HHDService) info() {
+	info := model.NewServiceResponse(g.HHD, m.CurrentStatus)
+	if m.Status(nil) == false {
+		info.Status = 0
+		info.Info = "启动失败"
+	} else {
+		disks, err := funcs.DiskUseMetrics()
 		if err != nil {
+			//todo 获得失败咋个处理
 			log.Println(err)
 			return
 		}
-	})
+		info.Info = disks
+	}
+	pkt := src.ServiceResponsePkt(info)
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+func (m *HHDService) Upload(args map[string]string) {
+	if m.timeId != 0 {
+		src.CancelTimer(m.timeId)
+	}
+	interval := g.GetInterval(args, 10)
+	m.timeId = src.AddTimer(interval*time.Second, m.info)
 }
 func (m *HHDService) Watcher() {
 	run := m.Status(nil)

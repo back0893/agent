@@ -62,9 +62,23 @@ func ComResponse() iface.IPacket {
 	pkt.Id = g.Response
 	return pkt
 }
+
+/**
+服务动作
+*/
 func ServicePkt(data interface{}) iface.IPacket {
 	pkt := NewPkt()
 	pkt.Id = g.Service
+	pkt.Data, _ = g.EncodeData(data)
+	return pkt
+}
+
+/**
+服务的信息上报.
+*/
+func ServiceResponsePkt(data interface{}) iface.IPacket {
+	pkt := NewPkt()
+	pkt.Id = g.ServiceResponse
 	pkt.Data, _ = g.EncodeData(data)
 	return pkt
 }

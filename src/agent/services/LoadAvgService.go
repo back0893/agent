@@ -5,6 +5,7 @@ import (
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
+	"agent/src/g/model"
 	"github.com/back0893/goTcp/utils"
 	"log"
 	"time"
@@ -26,7 +27,7 @@ func NewLoadAvgServiceService(status int) *LoadAvgServiceService {
 	s := &LoadAvgServiceService{
 		CurrentStatus: status,
 	}
-	s.upload(map[string]string{})
+	s.Upload(map[string]string{})
 	return s
 }
 func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
@@ -51,13 +52,15 @@ func (m *LoadAvgServiceService) Action(action string, args map[string]string) {
 }
 
 func (m *LoadAvgServiceService) Start(args map[string]string) error {
-	m.CurrentStatus = 0
-
+	if m.Status(nil) {
+		return nil
+	}
+	m.CurrentStatus = 1
 	return nil
 }
 
 func (m *LoadAvgServiceService) Stop(map[string]string) error {
-	m.CurrentStatus = 1
+	m.CurrentStatus = 0
 	return nil
 }
 
@@ -74,38 +77,33 @@ func (m *LoadAvgServiceService) Restart(args map[string]string) error {
 func (m LoadAvgServiceService) Status(map[string]string) bool {
 	return m.CurrentStatus == 1
 }
-func (m *LoadAvgServiceService) upload(args map[string]string) {
-	if m.timeId != 0 {
-		src.CancelTimer(m.timeId)
-	}
-	m.timeId = src.AddTimer(g.GetInterval(args, 10)*time.Second, func() {
-		pkt := src.NewPkt()
-		pkt.Id = g.LoadAvg
-
-		if m.Status(nil) == false {
-			pkt.Data, _ = g.EncodeData("loadAvg  service stop")
-		} else {
-			loadAvg, err := funcs.LoadAvgMetrics()
-			if err != nil {
-				//todo 获得内存失败咋个处理
-				log.Println(err)
-				return
-			}
-
-			pkt.Data, err = g.EncodeData(loadAvg)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-		}
-
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		err := a.GetCon().Write(pkt)
+func (m LoadAvgServiceService) info() {
+	info := model.NewServiceResponse(g.LoadAvg, m.CurrentStatus)
+	if m.Status(nil) == false {
+		info.Status = 0
+		info.Info = "失败"
+	} else {
+		loadAvg, err := funcs.LoadAvgMetrics()
 		if err != nil {
+			//todo 获得失败咋个处理
 			log.Println(err)
 			return
 		}
-	})
+		info.Info = loadAvg
+	}
+	pkt := src.ServiceResponsePkt(info)
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+}
+func (m *LoadAvgServiceService) Upload(args map[string]string) {
+	if m.timeId != 0 {
+		src.CancelTimer(m.timeId)
+	}
+	m.timeId = src.AddTimer(g.GetInterval(args, 10)*time.Second, m.info)
 }
 func (m *LoadAvgServiceService) Watcher() {
 	run := m.Status(nil)

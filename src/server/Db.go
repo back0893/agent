@@ -1,7 +1,6 @@
 package server
 
 import (
-	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"github.com/go-sql-driver/mysql"
 	_ "github.com/go-sql-driver/mysql"
@@ -49,7 +48,6 @@ func newConnection(name string) (*sqlx.DB, error) {
 		Params:               utils.GlobalConfig.GetStringMapString("db.params"),
 		AllowNativePasswords: true,
 	}
-	fmt.Println(dsn.FormatDSN())
 	db, err := sqlx.Open("mysql", dsn.FormatDSN())
 	if err != nil {
 		return nil, err

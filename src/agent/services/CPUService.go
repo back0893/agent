@@ -31,7 +31,7 @@ func NewCPUService(status int) *CPUService {
 	s := &CPUService{
 		CurrentStatus: status,
 	}
-	s.upload(map[string]string{})
+	s.Upload(map[string]string{})
 	return s
 }
 
@@ -44,7 +44,7 @@ func (m *CPUService) Action(action string, args map[string]string) {
 	case "restart":
 		m.Restart(args)
 	case "status":
-		m.Status(args)
+		m.info()
 	}
 	pkt := src.NewPkt()
 	pkt.Id = g.ServiceResponse
@@ -57,6 +57,9 @@ func (m *CPUService) Action(action string, args map[string]string) {
 }
 
 func (m *CPUService) Start(args map[string]string) error {
+	if m.Status(nil) {
+		return nil
+	}
 	m.CurrentStatus = 1
 	return nil
 }
@@ -79,48 +82,47 @@ func (m *CPUService) Restart(args map[string]string) error {
 func (m CPUService) Status(map[string]string) bool {
 	return m.CurrentStatus == 1
 }
-func (m *CPUService) upload(args map[string]string) {
-	if m.timerId != 0 {
-		src.CancelTimer(m.timerId)
-	}
-	interval := g.GetInterval(args, 30)
+func (m CPUService) info() {
+	pkt := src.NewPkt()
+	pkt.Id = 999
 
-	m.timerId = src.AddTimer(interval*time.Second, func() {
-		pkt := src.NewPkt()
-		pkt.Id = g.CPU
-
-		if m.Status(nil) == false {
-			pkt.Data, _ = g.EncodeData("cpu service stop")
+	if m.Status(nil) == false {
+		pkt.Data, _ = g.EncodeData("cpu service stop")
+		return
+	} else {
+		if funcs.CpuPrepared() == false {
+			funcs.UpdateCpuStat()
 			return
-		} else {
-			if funcs.CpuPrepared() == false {
-				funcs.UpdateCpuStat()
-				return
-			}
-
-			err := funcs.UpdateCpuStat()
-			if err != nil {
-				log.Println(err)
-				return
-			}
-
-			cpu := funcs.CpuMetrics()
-			pkt.Data, err = g.EncodeData(cpu)
-			if err != nil {
-				log.Println(err)
-				return
-			}
 		}
 
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		err := a.GetCon().Write(pkt)
+		err := funcs.UpdateCpuStat()
 		if err != nil {
 			log.Println(err)
 			return
 		}
-	})
 
+		cpu := funcs.CpuMetrics()
+		pkt.Data, err = g.EncodeData(cpu)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	err := a.GetCon().Write(pkt)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }
+func (m *CPUService) Upload(args map[string]string) {
+	if m.timerId != 0 {
+		src.CancelTimer(m.timerId)
+	}
+	interval := g.GetInterval(args, 30)
+	m.timerId = src.AddTimer(interval*time.Second, m.info)
+}
+
 func (m *CPUService) Watcher() {
 	run := m.Status(nil)
 	if run == true && m.CurrentStatus == 0 {
