@@ -10,6 +10,7 @@ import (
 	"github.com/back0893/goTcp/iface"
 	"io"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -120,6 +121,10 @@ func Down(url, file string) error {
 		return err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		//如果非200返回,说明是有问题的更新
+		return errors.New("非200下载")
+	}
 	fp, err := os.Create(file)
 	if err != nil {
 		return err
@@ -141,4 +146,19 @@ func GetInterval(args map[string]string, def time.Duration) time.Duration {
 		}
 	}
 	return def
+}
+func CSTLocation() *time.Location {
+	loc, err := time.LoadLocation("Asia/Shanghai")
+	if err != nil {
+		loc = time.FixedZone("Asia/Shanghai", 8*3600)
+	}
+	return loc
+}
+func CSTTime() time.Time {
+	return time.Now().In(CSTLocation())
+}
+
+func Round(f float64, n int) float64 {
+	n10 := math.Pow10(n)
+	return math.Trunc((f+0.5/n10)*n10) / n10
 }

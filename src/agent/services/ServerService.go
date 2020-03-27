@@ -97,7 +97,6 @@ func (s *ServerService) Cancel() {
 func (s *ServerService) info() {
 	//使用当前服务的状态作为默认值
 	//如果启动失败,那么把状态修改成失败
-	fmt.Println("======")
 	info := model.NewServiceResponse(g.BaseServerInfo, s.CurrentStatus)
 
 	//获得cpu信息
@@ -138,13 +137,12 @@ func (s *ServerService) info() {
 		log.Println(err)
 		return
 	}
-	fmt.Println("sned ok")
 }
 
 func (s *ServerService) Upload(args map[string]string) {
 	if s.timerId != 0 {
 		src.CancelTimer(s.timerId)
 	}
-	interval := g.GetInterval(args, 5)
+	interval := g.GetInterval(args, 30)
 	s.timerId = src.AddTimer(interval*time.Second, s.info)
 }

@@ -46,7 +46,6 @@ func (r *RedisService) Start(args map[string]string) error {
 	}
 	r.CurrentStatus = 1
 	cmd := exec.Command("bash", "-c", "nohup redis-server >/dev/null 2>&1& echo $!>./redisPid")
-	fmt.Println("redis start ok", r.CurrentStatus)
 	return cmd.Run()
 }
 
@@ -121,10 +120,10 @@ func (r *RedisService) Action(action string, args map[string]string) {
 func (r *RedisService) info() {
 	info := model.NewServiceResponse(g.REDISSERVICE, r.CurrentStatus)
 	if r.Status(nil) {
-		info.Status = 0
-		info.Info = []byte("停止服务")
+		info.Info, _ = g.EncodeData("redis启动中")
 	} else {
-		info.Info = []byte("redis启动中")
+		info.Status = 0
+		info.Info, _ = g.EncodeData("停止服务")
 	}
 	pkt := src.ServiceResponsePkt(info)
 	//todo 收集redis的信息
@@ -134,15 +133,11 @@ func (r *RedisService) info() {
 	}
 }
 func (r *RedisService) Upload(args map[string]string) {
-	fmt.Println("redis")
 	if r.timerId != 0 {
 		src.CancelTimer(r.timerId)
 	}
-
-	interval := g.GetInterval(args, 12)
-	r.timerId = src.AddTimer(interval*time.Second, func() {
-
-	})
+	interval := g.GetInterval(args, 60*5)
+	r.timerId = src.AddTimer(interval*time.Second, r.info)
 }
 func (r *RedisService) Watcher() {
 	run := r.Status(nil)

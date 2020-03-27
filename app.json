@@ -12,6 +12,7 @@
     "net": "tcp",
     "addr": "106.75.138.97:3306",
     "dbname": "ep",
+    "ParseTime": true,
     "params": {
       "charset": "utf8"
     }

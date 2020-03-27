@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"strings"
-	"time"
 )
 
 func runtimeDir() (string, error) {
@@ -23,7 +22,7 @@ func runtimeDir() (string, error) {
 			return "", err
 		}
 	}
-	filePath := fmt.Sprintf("%s/%s.log", strings.TrimRight(path, "/"), time.Now().Format("2006-01-02"))
+	filePath := fmt.Sprintf("%s/%s.log", strings.TrimRight(path, "/"), "server")
 	return filePath, nil
 }
 

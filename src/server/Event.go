@@ -6,7 +6,6 @@ import (
 	"agent/src/g/model"
 	serverModel "agent/src/server/model"
 	"context"
-	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/utils"
 	"log"
@@ -45,7 +44,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		auth.Id = ccServer.Id
 		ccService := []*serverModel.Service{}
 		if err := db.Select(&ccService, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		connection.SetExtraData("auth", &auth)
@@ -63,11 +62,10 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 
 	case g.PING:
 		e.SetTimeout(connection)
-		log.Println("心跳")
 	case g.ServiceResponse:
 		service := &model.ServiceResponse{}
 		if err := g.DecodeData(pkt.Data, service); err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		switch service.Service {
 		case g.BaseServerInfo:
@@ -81,26 +79,44 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			tmp, _ := connection.GetExtraData("auth")
 			auth := tmp.(*model.Auth)
 			db, _ := DbConnections.Get("ep")
-			memBusy := (mem.Used * 10000 / mem.Total) / 100
-			if _, err := db.Exec("insert cc_server_log (server_id,ram,cpu_usage_ratio,ram_usage_ratio) values (?,?,?,?)", auth.Id, float64(mem.Total)/(1024*1024), cpu.Busy, memBusy); err != nil {
-				fmt.Println(err.Error())
+			ram_usage_ratio := g.Round(float64(mem.Used)/float64(mem.Total), 2)
+			if _, err := db.Exec("insert cc_server_log (server_id,ram,cpu_usage_ratio,ram_usage_ratio,created_at) values (?,?,?,?,?)", auth.Id, float64(mem.Total)/(1024*1024), g.Round(cpu.Busy/100, 2), ram_usage_ratio, g.CSTTime()); err != nil {
+				log.Println(err.Error())
 			}
-			if _, err := db.Query("update cc_server set cpu_usage_ratio=?,ram_usage_ratio=? where id=?", cpu.Busy, memBusy, auth.Id); err != nil {
-				fmt.Println(err.Error())
+			if _, err := db.Query("update cc_server set cpu_usage_ratio=?,ram_usage_ratio=? where id=?", g.Round(cpu.Busy/100, 2), ram_usage_ratio, auth.Id); err != nil {
+				log.Println(err.Error())
 			}
-			log.Printf("cpu目前负载%.2f,闲置%.2f\n", cpu.Busy, cpu.Idle)
-			log.Printf("内存大小%.2fMB,已经使用%.2fMB\n", float64(mem.Total)/(1024*1024), float64(mem.Used)/(1024*1024))
 		case g.HHD:
 			disks := make([]*model.Disk, 0)
 			if err := g.DecodeData(service.Info, &disks); err != nil {
 				log.Println("读取硬盘信息失败")
 				break
 			}
+			tmp, _ := connection.GetExtraData("auth")
+			auth := tmp.(*model.Auth)
+			db, _ := DbConnections.Get("ep")
 			for _, disk := range disks {
+				var serverDisk serverModel.ServerDisk
+				if err := db.Get(&serverDisk, "select id,name,gb,server_id from cc_server_disk where server_id=? and name=?", auth.Id, disk.FsFile); err != nil {
+				}
 				total := float64(disk.Total) / (1024 * 1024)
-				used := float64(disk.Used) / (1024 * 1024)
-				free := float64(disk.Free) / (1024 * 1024)
-				log.Printf("硬盘名称%s,总大小%.2fMB,已经使用%.2fMB,剩余%.2fMB\n", disk.FsFile, total, used, free)
+				if serverDisk.Id == 0 {
+					if re, err := db.Exec("insert cc_server_disk (`name`,`gb`,`server_id`) values(?,?,?)", disk.FsFile, g.Round(total/1024, 2), auth.Id); err != nil {
+						continue
+					} else {
+						serverDisk.Id, _ = re.LastInsertId()
+					}
+				} else {
+					if _, err := db.Exec("update cc_server_disk  set gb=? where server_id=? and `name`=?", g.Round(total/1024, 2), auth.Id, disk.FsFile); err != nil {
+						continue
+					}
+				}
+
+				ratio := g.Round(float64(disk.Used)/float64(disk.Total), 2)
+				created_at := g.CSTTime()
+				if _, err := db.Exec("insert cc_server_disk_log (`disk_id`,`usage_ratio`,`created_at`) values (?,?,?)", serverDisk.Id, ratio, created_at); err != nil {
+					continue
+				}
 			}
 		case g.PortListen:
 			ports := make([]*model.Port, 0)
@@ -122,7 +138,16 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 				log.Println("读取redis失败")
 				break
 			}
-			log.Println("redis====>", info)
+			tmp, _ := connection.GetExtraData("auth")
+			auth := tmp.(*model.Auth)
+			db, _ := DbConnections.Get("ep")
+			created_at := g.CSTTime()
+			if _, err := db.Exec("update cc_server_service set status=? where server_id=? and service_template_id=?", service.Status, auth.Id, service.Service); err != nil {
+				log.Println(err)
+			}
+			if _, err := db.Exec("insert cc_service_log (server_service_id,status,created_at) values (?,?,?)", auth.Id, service.Status, created_at); err != nil {
+				log.Println(err)
+			}
 		}
 	}
 	packet = src.ComResponse()

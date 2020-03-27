@@ -41,7 +41,10 @@ func (uc *UpdateCommand) Do(Info *model2.UpdateInfo) error {
 	newFile := uc.GetNewFilename()
 	currentFile := uc.GetFilename()
 	oldFile := uc.GetOldIFilename()
-	g.Down(Info.Url, newFile)
+	if err := g.Down(Info.Url, newFile); err != nil {
+		uc.Undo()
+		return err
+	}
 	if err := os.Rename(currentFile, oldFile); err != nil {
 		uc.Undo()
 		return err
