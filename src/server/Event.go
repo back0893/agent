@@ -4,16 +4,46 @@ import (
 	"agent/src"
 	"agent/src/g"
 	"agent/src/g/model"
+	"agent/src/server/Db"
+	"agent/src/server/handler"
+	serverFace "agent/src/server/iface"
 	serverModel "agent/src/server/model"
+	"agent/src/server/net"
 	"context"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/utils"
 	"log"
+	"sync"
 	"time"
 )
 
-type Event struct{}
+func NewEvent() *Event {
+	e := &Event{
+		methods: make(map[int32]serverFace.HandlerMethod),
+	}
+	e.AddHandlerMethod(0, &handler.DefaultMethod{})
+	return e
+}
 
+type Event struct {
+	lock    sync.RWMutex
+	methods map[int32]serverFace.HandlerMethod
+}
+
+func (e *Event) AddHandlerMethod(id int32, fn serverFace.HandlerMethod) {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	e.methods[id] = fn
+}
+func (e *Event) GetMethod(id int32) serverFace.HandlerMethod {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	fn, ok := e.methods[id]
+	if ok {
+		return fn
+	}
+	return e.methods[0]
+}
 func (e *Event) SetTimeout(connection iface.IConnection) {
 	timeOut := time.Duration(utils.GlobalConfig.GetInt("heartTimeOut"))
 	//每次心跳为connect设置新的过期时间,如果写入或者读取超过就会触发timeout的错误
@@ -21,7 +51,8 @@ func (e *Event) SetTimeout(connection iface.IConnection) {
 }
 
 func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
-	e.SetTimeout(connection)
+	c := connection.(*net.Connection)
+	c.UpdateTimeOut()
 }
 
 func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
@@ -36,7 +67,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 		}
 
 		log.Printf("agent登录,登录用户:%s\n", auth.Username)
-		db, _ := DbConnections.Get("ep")
+		db, _ := Db.DbConnections.Get("ep")
 		ccServer := serverModel.Server{}
 		if err := db.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
 			return
@@ -78,7 +109,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			}
 			tmp, _ := connection.GetExtraData("auth")
 			auth := tmp.(*model.Auth)
-			db, _ := DbConnections.Get("ep")
+			db, _ := Db.DbConnections.Get("ep")
 			ram_usage_ratio := g.Round(float64(mem.Used)/float64(mem.Total), 2)
 			if _, err := db.Exec("insert cc_server_log (server_id,ram,cpu_usage_ratio,ram_usage_ratio,created_at) values (?,?,?,?,?)", auth.Id, float64(mem.Total)/(1024*1024), g.Round(cpu.Busy/100, 2), ram_usage_ratio, g.CSTTime()); err != nil {
 				log.Println(err.Error())
@@ -94,7 +125,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			}
 			tmp, _ := connection.GetExtraData("auth")
 			auth := tmp.(*model.Auth)
-			db, _ := DbConnections.Get("ep")
+			db, _ := Db.DbConnections.Get("ep")
 			for _, disk := range disks {
 				var serverDisk serverModel.ServerDisk
 				if err := db.Get(&serverDisk, "select id,name,gb,server_id from cc_server_disk where server_id=? and name=?", auth.Id, disk.FsFile); err != nil {
@@ -140,7 +171,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			}
 			tmp, _ := connection.GetExtraData("auth")
 			auth := tmp.(*model.Auth)
-			db, _ := DbConnections.Get("ep")
+			db, _ := Db.DbConnections.Get("ep")
 			created_at := g.CSTTime()
 			if _, err := db.Exec("update cc_server_service set status=? where server_id=? and service_template_id=?", service.Status, auth.Id, service.Service); err != nil {
 				log.Println(err)

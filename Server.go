@@ -48,7 +48,9 @@ func main() {
 	s := net.NewServer()
 	src.InitTimingWheel(s.GetContext())
 
-	s.AddEvent(&server.Event{})
+	event := &server.Event{}
+	event.AddHandlerMethod()
+	s.AddEvent(event)
 	s.AddProtocol(&src.Protocol{})
 
 	ip := utils.GlobalConfig.GetString("Ip")
