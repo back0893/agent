@@ -2,12 +2,11 @@ package handler
 
 import (
 	"agent/src"
-	"agent/src/server/net"
 	"context"
+	"github.com/back0893/goTcp/iface"
 )
 
 type Ping struct{}
 
-func (Ping) Handler(ctx context.Context, packet *src.Packet, connection *net.Connection) {
-	connection.UpdateTimeOut()
+func (Ping) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
 }

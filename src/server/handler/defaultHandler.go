@@ -2,15 +2,15 @@ package handler
 
 import (
 	"agent/src"
-	"agent/src/server/net"
 	"context"
+	"github.com/back0893/goTcp/iface"
 	"log"
 )
 
 type DefaultMethod struct {
 }
 
-func (d DefaultMethod) Handler(ctx context.Context, packet *src.Packet, connection *net.Connection) {
+func (d DefaultMethod) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
 	log.Printf("方法还未被时实现method_id===>%d", packet.Id)
 	pkt := src.ComResponse()
 	connection.Write(pkt)

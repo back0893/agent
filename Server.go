@@ -49,7 +49,6 @@ func main() {
 	src.InitTimingWheel(s.GetContext())
 
 	event := &server.Event{}
-	event.AddHandlerMethod()
 	s.AddEvent(event)
 	s.AddProtocol(&src.Protocol{})
 

@@ -8,7 +8,6 @@ import (
 	"agent/src/server/handler"
 	serverFace "agent/src/server/iface"
 	serverModel "agent/src/server/model"
-	"agent/src/server/net"
 	"context"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/utils"
@@ -51,8 +50,7 @@ func (e *Event) SetTimeout(connection iface.IConnection) {
 }
 
 func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
-	c := connection.(*net.Connection)
-	c.UpdateTimeOut()
+	e.SetTimeout(connection)
 }
 
 func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
@@ -103,7 +101,9 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			var cpu model.Cpu
 			var mem model.Memory
 			loadAvgs := make([]*model.LoadAvg, 0)
-			if err := g.DecodeData(service.Info, &cpu, &mem, &loadAvgs); err != nil {
+			var cpuNum int
+			var cpuMhz string
+			if err := g.DecodeData(service.Info, &cpu, &mem, &loadAvgs, &cpuNum, &cpuMhz); err != nil {
 				log.Println("读取信息失败")
 				break
 			}
@@ -114,7 +114,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 			if _, err := db.Exec("insert cc_server_log (server_id,ram,cpu_usage_ratio,ram_usage_ratio,created_at) values (?,?,?,?,?)", auth.Id, float64(mem.Total)/(1024*1024), g.Round(cpu.Busy/100, 2), ram_usage_ratio, g.CSTTime()); err != nil {
 				log.Println(err.Error())
 			}
-			if _, err := db.Query("update cc_server set cpu_usage_ratio=?,ram_usage_ratio=? where id=?", g.Round(cpu.Busy/100, 2), ram_usage_ratio, auth.Id); err != nil {
+			if _, err := db.Query("update cc_server set cpu_usage_ratio=?,ram_usage_ratio=?,cpu_num=?,cpu_mhz=? where id=?", g.Round(cpu.Busy/100, 2), ram_usage_ratio, cpuNum, cpuMhz, auth.Id); err != nil {
 				log.Println(err.Error())
 			}
 		case g.HHD:

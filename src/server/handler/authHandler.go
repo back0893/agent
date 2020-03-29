@@ -6,14 +6,14 @@ import (
 	"agent/src/g/model"
 	"agent/src/server/Db"
 	serverModel "agent/src/server/model"
-	"agent/src/server/net"
 	"context"
+	"github.com/back0893/goTcp/iface"
 	"log"
 )
 
 type AuthHandler struct{}
 
-func (AuthHandler) Handler(ctx context.Context, packet *src.Packet, connection *net.Connection) {
+func (AuthHandler) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
 	var auth model.Auth
 	if err := g.DecodeData(packet.Data, &auth); err != nil {
 		log.Println("读取登录信息失败,关闭连接")

@@ -108,8 +108,14 @@ func (s *ServerService) info() {
 		info.Info = []byte("获得cpu失败")
 		return
 	}
-	cpu := funcs.CpuMetrics()
-
+	cpuStatus := funcs.CpuMetrics()
+	//cpu的个数
+	cpuNum := funcs.CpuNum()
+	//cpu的基础频率
+	cpuMhz, err := funcs.CpuMHz()
+	if err != nil {
+		cpuMhz = "0"
+	}
 	//获得内存
 	mem, err := funcs.MemMetrics()
 	if err != nil {
@@ -124,7 +130,7 @@ func (s *ServerService) info() {
 		return
 	}
 
-	data, err := g.EncodeData(cpu, mem, loadAvg)
+	data, err := g.EncodeData(cpuStatus, mem, loadAvg, cpuNum, cpuMhz)
 	if err != nil {
 		fmt.Print(err)
 		return
@@ -143,6 +149,6 @@ func (s *ServerService) Upload(args map[string]string) {
 	if s.timerId != 0 {
 		src.CancelTimer(s.timerId)
 	}
-	interval := g.GetInterval(args, 30)
+	interval := g.GetInterval(args, 60)
 	s.timerId = src.AddTimer(interval*time.Second, s.info)
 }

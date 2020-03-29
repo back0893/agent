@@ -37,6 +37,7 @@ func setLogWrite() {
 		log.Println("无法接入日志")
 		return
 	}
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.SetOutput(fileWrite)
 }
 func LoadInit(file string) {

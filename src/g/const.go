@@ -22,7 +22,7 @@ const (
 	//agent的context传递key
 	AGENT string = "agent"
 	//全局产量,当前agent的版本
-	VERSION = 3
+	VERSION = 4
 
 	/**
 	下发的service的id映射服务

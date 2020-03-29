@@ -3,6 +3,7 @@ package funcs
 import (
 	model2 "agent/src/g/model"
 	"github.com/toolkits/nux"
+	"runtime"
 	"sync"
 )
 
@@ -59,4 +60,11 @@ func CpuMetrics() *model2.Cpu {
 		Idle: cpuIdle,
 		Busy: 100 - cpuIdle,
 	}
+}
+
+func CpuMHz() (string, error) {
+	return nux.CpuMHz()
+}
+func CpuNum() int {
+	return runtime.NumCPU()
 }
