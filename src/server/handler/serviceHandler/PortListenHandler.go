@@ -11,6 +11,9 @@ import (
 type PortService struct {
 }
 
+func NewPortService() *PortService {
+	return &PortService{}
+}
 func (p PortService) Handler(ctx context.Context, service *model.ServiceResponse, connection iface.IConnection) error {
 	ports := make([]*model.Port, 0)
 	if err := g.DecodeData(service.Info, &ports); err != nil {

@@ -149,6 +149,6 @@ func (s *ServerService) Upload(args map[string]string) {
 	if s.timerId != 0 {
 		src.CancelTimer(s.timerId)
 	}
-	interval := g.GetInterval(args, 60)
+	interval := g.GetInterval(args, 10)
 	s.timerId = src.AddTimer(interval*time.Second, s.info)
 }

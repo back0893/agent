@@ -12,6 +12,9 @@ import (
 type BaseServerInfo struct {
 }
 
+func NewBaseServerInfo() *BaseServerInfo {
+	return &BaseServerInfo{}
+}
 func (b BaseServerInfo) Handler(ctx context.Context, service *model.ServiceResponse, connection iface.IConnection) error {
 	var cpu model.Cpu
 	var mem model.Memory

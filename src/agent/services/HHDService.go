@@ -98,7 +98,7 @@ func (m *HHDService) Upload(args map[string]string) {
 	if m.timeId != 0 {
 		src.CancelTimer(m.timeId)
 	}
-	interval := g.GetInterval(args, 60)
+	interval := g.GetInterval(args, 10)
 	m.timeId = src.AddTimer(interval*time.Second, m.info)
 }
 func (m *HHDService) Watcher() {

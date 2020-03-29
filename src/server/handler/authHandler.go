@@ -11,6 +11,10 @@ import (
 	"log"
 )
 
+func NewAuthHandler() *AuthHandler {
+	return &AuthHandler{}
+}
+
 type AuthHandler struct{}
 
 func (AuthHandler) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {

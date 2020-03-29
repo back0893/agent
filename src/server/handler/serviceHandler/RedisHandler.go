@@ -12,6 +12,10 @@ import (
 type RedisService struct {
 }
 
+func NewRedisService() *RedisService {
+	return &RedisService{}
+}
+
 func (r RedisService) Handler(ctx context.Context, service *model.ServiceResponse, connection iface.IConnection) error {
 	var info string
 	if err := g.DecodeData(service.Info, &info); err != nil {

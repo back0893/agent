@@ -13,6 +13,9 @@ import (
 type HHDHandler struct {
 }
 
+func NewHHDHandler() *HHDHandler {
+	return &HHDHandler{}
+}
 func (H HHDHandler) Handler(ctx context.Context, service *model.ServiceResponse, connection iface.IConnection) error {
 	disks := make([]*model.Disk, 0)
 	if err := g.DecodeData(service.Info, &disks); err != nil {

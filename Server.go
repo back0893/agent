@@ -6,6 +6,7 @@ import (
 	"agent/src/http"
 	"agent/src/http/handler"
 	"agent/src/server"
+	ServiceHandler "agent/src/server/handler"
 	"context"
 	"flag"
 	"fmt"
@@ -48,7 +49,15 @@ func main() {
 	s := net.NewServer()
 	src.InitTimingWheel(s.GetContext())
 
-	event := &server.Event{}
+	event := server.NewEvent()
+	/**
+	新增对应的处理方法
+	*/
+	event.AddHandlerMethod(g.Auth, ServiceHandler.NewAuthHandler())
+	event.AddHandlerMethod(g.ServiceResponse, ServiceHandler.NewServiceResponse())
+	event.AddHandlerMethod(g.PING, ServiceHandler.NewPing())
+	event.AddHandlerMethod(0, ServiceHandler.NewDefaultMethod())
+
 	s.AddEvent(event)
 	s.AddProtocol(&src.Protocol{})
 
