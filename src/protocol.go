@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"github.com/back0893/goTcp/iface"
+	"log"
 )
 
 var (
@@ -40,6 +41,10 @@ func (Protocol) UnPack(conn iface.IConnection) (iface.IPacket, error) {
 
 	//固定负载数据
 	length := pkt.Length - g.HeaderLength
+	if length < 0 {
+		log.Println("长度不足", pkt.Id, pkt.Length, pkt.Timestamp)
+		return nil, errors.New("长度不足")
+	}
 	pkt.Data = make([]byte, length)
 	if err := binary.Read(buffer, binary.BigEndian, pkt.Data); err != nil {
 		return nil, UnPackError
