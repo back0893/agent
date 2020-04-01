@@ -80,7 +80,7 @@ func format(value reflect.Value) string {
 	}
 }
 func mKv(value reflect.Value) (keys, values []string) {
-
+	return nil, nil
 }
 func (query *Query) Insert(data interface{}) (int, error) {
 	var keys, values []string
@@ -105,7 +105,7 @@ func (query *Query) Insert(data interface{}) (int, error) {
 				keys, values = sKv(sv)
 				continue
 			}
-			_, val := sKv()
+			_, val := sKv(sv)
 			values = append(values, val...)
 		}
 	case reflect.Map:
