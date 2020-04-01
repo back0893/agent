@@ -32,7 +32,7 @@ func httpServer(ctx context.Context, server iface.IServer) {
 
 	go func() {
 		if err := s.Run(); err != nil {
-			panic(err)
+			log.Println(err)
 		}
 	}()
 	select {
