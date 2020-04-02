@@ -12,6 +12,9 @@ import (
 /**
 只需要实现4个方法的sql操作,就行,简单.
 */
+const (
+	INSERTSQL = "insert into %table% %field% values %value%"
+)
 
 type Query struct {
 	db    *sql.DB
@@ -48,7 +51,7 @@ func sKv(value reflect.Value) (keys, values []string) {
 			}
 			value := format(vf)
 			if value != "" {
-				keys = append(keys, key)
+				keys = append(keys, fmt.Sprintf("`%s`", key))
 				values = append(values, value)
 			}
 		}
@@ -79,11 +82,26 @@ func format(value reflect.Value) string {
 		return ""
 	}
 }
-func mKv(value reflect.Value) (keys, values []string) {
-	return nil, nil
+func mKv(value reflect.Value) (keys, values []string, err error) {
+	itor := value.MapRange()
+	for itor.Next() {
+		if itor.Key().Kind() != reflect.String {
+			return nil, nil, errors.New("map的key只能是string")
+		}
+		value := format(itor.Value())
+		if value != "" {
+			keys = append(keys, itor.Key().Interface().(string))
+			values = append(values, value)
+		}
+	}
+	return
 }
-func (query *Query) Insert(data interface{}) (int, error) {
+func (query *Query) Insert(data interface{}) (int64, error) {
+	if query.table == "" {
+		return 0, errors.New("table为空")
+	}
 	var keys, values []string
+	var err error
 	v := reflect.ValueOf(data)
 	//如果data是一个指针,获得指针的值
 	for v.Kind() == reflect.Ptr {
@@ -109,11 +127,43 @@ func (query *Query) Insert(data interface{}) (int, error) {
 			values = append(values, val...)
 		}
 	case reflect.Map:
-		keys, values = mKv(v)
+		keys, values, err = mKv(v)
+		if err != nil {
+			return 0, err
+		}
 	default:
 		return 0, errors.New("新增接受值错误")
 	}
-	return 0, nil
+
+	kl := len(keys)
+	vl := len(values)
+	if kl == 0 || vl == 0 {
+		return 0, errors.New("没有数据输入")
+	}
+
+	var insertValue string
+	//如果是slice,kl一定大于vl
+	if kl < vl {
+		var tmpValues []string
+		for kl <= vl {
+			if kl%(len(keys)) == 0 {
+				tmpValues = append(tmpValues, fmt.Sprintf("(%s)", strings.Join(values[kl-len(keys):kl], ",")))
+			}
+			kl++
+		}
+		insertValue = strings.Join(tmpValues, ",")
+	} else {
+		insertValue = fmt.Sprintf("(%s)", strings.Join(values, ","))
+	}
+	field := fmt.Sprintf("(%s)", strings.Join(keys, ","))
+	replacer := strings.NewReplacer("%table%", query.table, "%field%", field, "%value%", insertValue)
+	realSql := replacer.Replace(INSERTSQL)
+	fmt.Println(realSql)
+	result, err := query.db.Exec(realSql)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
 }
 func Table(db *sql.DB, tableName string) *Query {
 	return &Query{
