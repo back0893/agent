@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 /**
@@ -14,14 +13,34 @@ import (
 */
 const (
 	INSERTSQL = "insert into %table% %field% values %value%"
+	SELECTSQL = "select %field% from %table% %where% %order% %limit% %offset%"
 )
 
-type Query struct {
-	db    *sql.DB
-	table string
+type Where struct {
+	logic string        //连接方式
+	where string        //where条件
+	args  []interface{} //参数
 }
 
-func sKv(value reflect.Value) (keys, values []string) {
+func (w Where) GetWhere() string {
+	return w.where
+}
+func (w Where) GetArgs() []interface{} {
+	return w.args
+}
+
+type Query struct {
+	db     *sql.DB
+	table  string
+	wheres []*Where
+	field  []string
+	limit  string
+	offset string
+	order  string
+	errs   []error
+}
+
+func sKv(value reflect.Value) (keys []string, values []interface{}) {
 	t := value.Type()
 	for i := 0; i < t.NumField(); i++ {
 		tf := t.Field(i)
@@ -49,50 +68,20 @@ func sKv(value reflect.Value) (keys, values []string) {
 			if key == "" {
 				continue
 			}
-			value := format(vf)
-			if value != "" {
-				keys = append(keys, fmt.Sprintf("`%s`", key))
-				values = append(values, value)
-			}
+			keys = append(keys, fmt.Sprintf("`%s`", key))
+			values = append(values, vf.Interface())
 		}
 	}
 	return
 }
-func format(value reflect.Value) string {
-	//格式化输出
-	if t, ok := value.Interface().(time.Time); ok {
-		return t.Format("2006-01-02 15:04:05")
-	}
-	switch value.Kind() {
-	case reflect.String:
-		return fmt.Sprintf(`'%s'`, value.Interface())
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return fmt.Sprintf(`%d`, value.Interface())
-	case reflect.Float32, reflect.Float64:
-		return fmt.Sprintf(`%f`, value.Interface())
-	case reflect.Slice, reflect.Array:
-		var values []string
-		for i := 0; i < value.Len(); i++ {
-			values = append(values, format(value.Index(i)))
-		}
-		return fmt.Sprintf(`(%s)`, strings.Join(values, ","))
-	case reflect.Interface:
-		return format(value.Elem())
-	default:
-		return ""
-	}
-}
-func mKv(value reflect.Value) (keys, values []string, err error) {
+func mKv(value reflect.Value) (keys []string, values []interface{}, err error) {
 	itor := value.MapRange()
 	for itor.Next() {
 		if itor.Key().Kind() != reflect.String {
 			return nil, nil, errors.New("map的key只能是string")
 		}
-		value := format(itor.Value())
-		if value != "" {
-			keys = append(keys, itor.Key().Interface().(string))
-			values = append(values, value)
-		}
+		keys = append(keys, itor.Key().Interface().(string))
+		values = append(values, itor.Value())
 	}
 	return
 }
@@ -100,7 +89,8 @@ func (query *Query) Insert(data interface{}) (int64, error) {
 	if query.table == "" {
 		return 0, errors.New("table为空")
 	}
-	var keys, values []string
+	var keys []string
+	var values []interface{}
 	var err error
 	v := reflect.ValueOf(data)
 	//如果data是一个指针,获得指针的值
@@ -143,27 +133,112 @@ func (query *Query) Insert(data interface{}) (int64, error) {
 
 	var insertValue string
 	//如果是slice,kl一定大于vl
-	if kl < vl {
+	if vl%kl == 0 {
 		var tmpValues []string
-		for kl <= vl {
+		for i := vl / kl; i > 0; i-- {
 			if kl%(len(keys)) == 0 {
-				tmpValues = append(tmpValues, fmt.Sprintf("(%s)", strings.Join(values[kl-len(keys):kl], ",")))
+				insertValue = fmt.Sprintf("(%s)", strings.Trim(strings.Repeat(",?", kl), ","))
+				tmpValues = append(tmpValues, insertValue)
 			}
-			kl++
 		}
 		insertValue = strings.Join(tmpValues, ",")
 	} else {
-		insertValue = fmt.Sprintf("(%s)", strings.Join(values, ","))
+		return 0, errors.New("插入长度不一致")
 	}
+
 	field := fmt.Sprintf("(%s)", strings.Join(keys, ","))
 	replacer := strings.NewReplacer("%table%", query.table, "%field%", field, "%value%", insertValue)
 	realSql := replacer.Replace(INSERTSQL)
 	fmt.Println(realSql)
-	result, err := query.db.Exec(realSql)
+	result, err := query.db.Exec(realSql, values...)
 	if err != nil {
 		return 0, err
 	}
 	return result.LastInsertId()
+}
+
+func (q *Query) Where(w interface{}, args ...interface{}) *Query {
+	if where, err := where("and", w, args...); err != nil {
+		q.errs = append(q.errs, err)
+	} else {
+		q.wheres = append(q.wheres, where)
+	}
+	return q
+}
+func (q *Query) WhereOr(w interface{}, args ...interface{}) *Query {
+	if where, err := where("or", w, args); err != nil {
+		q.errs = append(q.errs, err)
+	} else {
+		q.wheres = append(q.wheres, where)
+	}
+	return q
+}
+func (q *Query) Limit(limit uint) *Query {
+	q.limit = fmt.Sprintf("limit %d", limit)
+	return q
+}
+func (q *Query) Offset(offset uint) *Query {
+	q.offset = fmt.Sprintf("offset %d", offset)
+	return q
+}
+func (q *Query) Order(ord string, asc bool) *Query {
+	t := "asc"
+	if asc == false {
+		t = "desc"
+	}
+	q.order = fmt.Sprintf("order by %s %s", ord, t)
+	return q
+}
+
+func (q *Query) Select() *sql.Row {
+	where := ""
+	args := make([]interface{}, 0)
+	if len(q.wheres) > 0 {
+		t := make([]string, len(q.wheres))
+		for i, w := range q.wheres {
+			t[i] = fmt.Sprintf("(%s)", w.GetWhere())
+			args = append(args, w.GetArgs()...)
+		}
+		where = "where " + strings.Join(t, " and ")
+	}
+	replacer := strings.NewReplacer("%field%", "`id`,`name`", "%table%", q.table, "%where%", where, "%order%", q.order, "%limit%", q.limit, "%offset%", q.offset)
+	sqlStr := replacer.Replace(SELECTSQL)
+	return q.db.QueryRow(sqlStr, args...)
+}
+func newWhere(logic string, w string, args ...interface{}) *Where {
+	return &Where{
+		logic: logic,
+		where: w,
+		args:  args,
+	}
+}
+func where(logic string, w interface{}, args ...interface{}) (*Where, error) {
+	v := reflect.ValueOf(w)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	switch v.Kind() {
+	case reflect.String:
+		return newWhere(logic, w.(string), args...), nil
+	case reflect.Struct:
+		keys, values := sKv(v)
+		for i, _ := range keys {
+			keys[i] = fmt.Sprintf("%s=?", keys[i])
+		}
+		return newWhere(logic, strings.Join(keys, ","), values...), nil
+	case reflect.Map:
+		keys, values, err := mKv(v)
+		if err != nil {
+			return nil, err
+		}
+		for i, _ := range keys {
+			keys[i] = fmt.Sprintf("%s=?", keys[i])
+		}
+		return newWhere(logic, strings.Join(keys, ","), values...), nil
+	default:
+		return nil, errors.New("不支持的条件参数")
+	}
+
 }
 func Table(db *sql.DB, tableName string) *Query {
 	return &Query{
