@@ -37,7 +37,7 @@ type Query struct {
 	limit  string
 	offset string
 	order  string
-	errs   []error
+	errs   []string
 }
 
 func sKv(value reflect.Value) (keys []string, values []interface{}) {
@@ -159,7 +159,7 @@ func (query *Query) Insert(data interface{}) (int64, error) {
 
 func (q *Query) Where(w interface{}, args ...interface{}) *Query {
 	if where, err := where("and", w, args...); err != nil {
-		q.errs = append(q.errs, err)
+		q.errs = append(q.errs, err.Error())
 	} else {
 		q.wheres = append(q.wheres, where)
 	}
@@ -167,7 +167,7 @@ func (q *Query) Where(w interface{}, args ...interface{}) *Query {
 }
 func (q *Query) WhereOr(w interface{}, args ...interface{}) *Query {
 	if where, err := where("or", w, args); err != nil {
-		q.errs = append(q.errs, err)
+		q.errs = append(q.errs, err.Error())
 	} else {
 		q.wheres = append(q.wheres, where)
 	}
@@ -190,7 +190,7 @@ func (q *Query) Order(ord string, asc bool) *Query {
 	return q
 }
 
-func (q *Query) Select() *sql.Row {
+func (q *Query) toSql() (string, []interface{}) {
 	where := ""
 	args := make([]interface{}, 0)
 	if len(q.wheres) > 0 {
@@ -201,9 +201,196 @@ func (q *Query) Select() *sql.Row {
 		}
 		where = "where " + strings.Join(t, " and ")
 	}
-	replacer := strings.NewReplacer("%field%", "`id`,`name`", "%table%", q.table, "%where%", where, "%order%", q.order, "%limit%", q.limit, "%offset%", q.offset)
+	replacer := strings.NewReplacer("%field%", strings.Join(q.field, ","), "%table%", q.table, "%where%", where, "%order%", q.order, "%limit%", q.limit, "%offset%", q.offset)
 	sqlStr := replacer.Replace(SELECTSQL)
-	return q.db.QueryRow(sqlStr, args...)
+	return sqlStr, args
+}
+func (q *Query) Select(dest interface{}) error {
+	if len(q.errs) > 0 {
+		return errors.New(strings.Join(q.errs, "\n"))
+	}
+	v := reflect.ValueOf(dest)
+	t := v.Type()
+	if t.Kind() != reflect.Ptr {
+		return errors.New("只能传递进入指针")
+	}
+	if !v.Elem().CanAddr() {
+		return errors.New("只能传递进入指针")
+	}
+
+	t = t.Elem()
+	v = v.Elem()
+
+	//如果没有field没有值,从struct取值
+	if len(q.field) == 0 {
+		switch t.Kind() {
+		case reflect.Struct:
+			if t.Name() != "Time" {
+				q.field = sk(v)
+			}
+		case reflect.Slice:
+			//如果是切面就需要取出其中的一个
+			if t.Kind() == reflect.Ptr {
+				t = t.Elem()
+			}
+			if t.Kind() == reflect.Struct {
+				if t.Name() != "Time" {
+					q.field = sk(reflect.Zero(t))
+				}
+			}
+		}
+	}
+	if len(q.field) == 0 {
+		return errors.New("查询的字段不能为空")
+	}
+	if t.Kind() != reflect.Slice {
+		q.Limit(1)
+	}
+	//todo
+	tmpSql, args := q.toSql()
+	rows, err := q.db.Query(tmpSql, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	switch t.Kind() {
+	case reflect.Slice:
+		dt := t.Elem()
+		for dt.Kind() == reflect.Ptr {
+			dt = dt.Elem()
+		}
+		sl := reflect.MakeSlice(t, 0, 0)
+		for rows.Next() {
+			var destination reflect.Value
+			if dt.Kind() == reflect.Map {
+				destination, err = q.setMap(rows, dt)
+			} else {
+				destination, err = q.setElem(rows, dt)
+			}
+			if err != nil {
+				return err
+			}
+			switch t.Elem().Kind() {
+			case reflect.Ptr, reflect.Map:
+				sl = reflect.Append(sl, destination)
+			default:
+				sl = reflect.Append(sl, destination.Elem())
+			}
+		}
+		v.Set(sl)
+		return nil
+	case reflect.Map:
+		for rows.Next() {
+			m, err := q.setMap(rows, t)
+			if err != nil {
+				return err
+			}
+			v.Set(m)
+		}
+		return nil
+	default:
+		for rows.Next() {
+			destination, err := q.setElem(rows, t)
+			if err != nil {
+				return err
+			}
+			v.Set(destination.Elem())
+		}
+	}
+	return nil
+}
+func address(dest reflect.Value, columns []string) []interface{} {
+	dest = dest.Elem()
+	t := dest.Type()
+	addrs := make([]interface{}, 0)
+	switch t.Kind() {
+	case reflect.Struct:
+		for i := 0; i < t.NumField(); i++ {
+			vf := dest.Field(i)
+			tf := t.Field(i)
+			if tf.Anonymous {
+				continue
+			}
+			for vf.Kind() == reflect.Ptr {
+				vf = vf.Elem()
+			}
+			if vf.Kind() == reflect.Struct && tf.Type.Name() != "Time" {
+				nvf := reflect.New(vf.Type())
+				vf.Set(nvf.Elem())
+				addrs = append(addrs, address(nvf, columns)...)
+				continue
+			}
+			column := strings.Split(tf.Tag.Get("json"), ",")[0]
+			if column == "" {
+				continue
+			}
+			for _, col := range columns {
+				if col == column {
+					addrs = append(addrs, vf.Addr().Interface())
+					break
+				}
+			}
+		}
+	default:
+		addrs = append(addrs, dest.Addr().Interface())
+	}
+	return addrs
+}
+
+//因为map不能用new生成,所以只能用一个方法来生成
+func (q *Query) setMap(rows *sql.Rows, t reflect.Type) (reflect.Value, error) {
+	if t.Elem().Kind() != reflect.Interface {
+		return reflect.ValueOf(nil), errors.New("map的值只能是interface")
+	}
+	m := reflect.MakeMap(t)
+	addrs := make([]interface{}, len(q.field))
+	for idx := range q.field {
+		addrs[idx] = new(interface{})
+	}
+	if err := rows.Scan(addrs...); err != nil {
+		return reflect.ValueOf(nil), err
+	}
+	for idx, column := range q.field {
+		m.SetMapIndex(reflect.ValueOf(column), reflect.ValueOf(addrs[idx]).Elem().Elem())
+	}
+	return m, nil
+}
+func (q *Query) setElem(rows *sql.Rows, t reflect.Type) (reflect.Value, error) {
+	addrsErr := errors.New("不能匹配")
+	dest := reflect.New(t)
+	addrs := address(dest, q.field)
+	if len(q.field) != len(addrs) {
+		return reflect.ValueOf(nil), addrsErr
+	}
+	if err := rows.Scan(addrs...); err != nil {
+		return reflect.ValueOf(nil), err
+	}
+	return dest, nil
+}
+func sk(value reflect.Value) []string {
+	var keys []string
+	t := value.Type()
+	for i := 0; i < t.NumField(); i++ {
+		tf := t.Field(i)
+		vf := value.Field(i)
+		if tf.Anonymous {
+			continue
+		}
+		for vf.Kind() == reflect.Ptr {
+			vf = vf.Elem()
+		}
+
+		if vf.Kind() == reflect.Struct && tf.Type.Name() != "Time" {
+			keys = append(keys, sk(vf)...)
+			continue
+		}
+		key := strings.Split(tf.Tag.Get("json"), ",")[0]
+		if key == "" {
+			continue
+		}
+		keys = append(keys, key)
+	}
+	return keys
 }
 func newWhere(logic string, w string, args ...interface{}) *Where {
 	return &Where{
