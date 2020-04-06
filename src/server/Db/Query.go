@@ -230,6 +230,7 @@ func (q *Query) Select(dest interface{}) error {
 			}
 		case reflect.Slice:
 			//如果是切面就需要取出其中的一个
+			t := t.Elem()
 			if t.Kind() == reflect.Ptr {
 				t = t.Elem()
 			}
@@ -298,6 +299,10 @@ func (q *Query) Select(dest interface{}) error {
 		}
 	}
 	return nil
+}
+func (q *Query) Field(columns ...string) *Query {
+	q.field = append(q.field, columns...)
+	return q
 }
 func address(dest reflect.Value, columns []string) []interface{} {
 	dest = dest.Elem()
