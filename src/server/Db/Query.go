@@ -215,7 +215,7 @@ func (q *Query) Select(dest interface{}) error {
 		return errors.New("只能传递进入指针")
 	}
 	if !v.Elem().CanAddr() {
-		return errors.New("只能传递进入指针")
+		return errors.New("不能正确的获得地址")
 	}
 
 	t = t.Elem()
@@ -230,6 +230,7 @@ func (q *Query) Select(dest interface{}) error {
 			}
 		case reflect.Slice:
 			//如果是切面就需要取出其中的一个
+			t := t.Elem()
 			if t.Kind() == reflect.Ptr {
 				t = t.Elem()
 			}

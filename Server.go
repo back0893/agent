@@ -13,6 +13,7 @@ import (
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
+	"github.com/pkg/errors"
 	"log"
 )
 
@@ -41,6 +42,12 @@ func httpServer(ctx context.Context, server iface.IServer) {
 	}
 }
 func main() {
+	defer func() {
+		if err := recover(); err != nil {
+			stackerr := errors.WithStack(errors.New(fmt.Sprintln(err)))
+			log.Printf("%+v", stackerr)
+		}
+	}()
 	flag.StringVar(&config, "c", "./app.json", "加载的配置json")
 	flag.Parse()
 	//加载

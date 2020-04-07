@@ -45,6 +45,11 @@ func (Protocol) UnPack(conn iface.IConnection) (iface.IPacket, error) {
 		log.Println("长度不足", pkt.Id, pkt.Length, pkt.Timestamp)
 		return nil, errors.New("长度不足")
 	}
+	//如果长度超过长度,应该是解析错误.
+	if length > 1024*100 {
+		log.Println("长度过长", pkt.Id, pkt.Length, pkt.Timestamp)
+		return nil, errors.New("长度过长")
+	}
 	pkt.Data = make([]byte, length)
 	if err := binary.Read(buffer, binary.BigEndian, pkt.Data); err != nil {
 		return nil, UnPackError
