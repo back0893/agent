@@ -2,6 +2,7 @@ package server
 
 import (
 	"agent/src"
+	"agent/src/g"
 	"agent/src/g/model"
 	"agent/src/server/handler"
 	serverFace "agent/src/server/iface"
@@ -46,6 +47,13 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 	SetTimeOut(connection.GetRawCon())
 	pkt := packet.(*src.Packet)
 	id := pkt.Id
+	//如果未认证过,断开
+	if id != g.Auth {
+		if _, ok := connection.GetExtraData("auth"); !ok {
+			connection.Close()
+			return
+		}
+	}
 	fn := e.GetMethod(id)
 	fn.Handler(ctx, pkt, connection)
 }
