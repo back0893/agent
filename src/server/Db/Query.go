@@ -14,6 +14,8 @@ import (
 const (
 	INSERTSQL = "insert into %table% %field% values %value%"
 	SELECTSQL = "select %field% from %table% %where% %order% %limit% %offset%"
+	UPDATESQL = "update %table% set %update% %where%"
+	DELSQL    = "delete from %table%  %where%"
 )
 
 type Where struct {
@@ -23,6 +25,7 @@ type Where struct {
 }
 
 func (w Where) GetWhere() string {
+
 	return w.where
 }
 func (w Where) GetArgs() []interface{} {
@@ -85,8 +88,8 @@ func mKv(value reflect.Value) (keys []string, values []interface{}, err error) {
 	}
 	return
 }
-func (query *Query) Insert(data interface{}) (int64, error) {
-	if query.table == "" {
+func (q *Query) Insert(data interface{}) (int64, error) {
+	if q.table == "" {
 		return 0, errors.New("table为空")
 	}
 	var keys []string
@@ -147,10 +150,10 @@ func (query *Query) Insert(data interface{}) (int64, error) {
 	}
 
 	field := fmt.Sprintf("(%s)", strings.Join(keys, ","))
-	replacer := strings.NewReplacer("%table%", query.table, "%field%", field, "%value%", insertValue)
+	replacer := strings.NewReplacer("%table%", q.table, "%field%", field, "%value%", insertValue)
 	realSql := replacer.Replace(INSERTSQL)
 	fmt.Println(realSql)
-	result, err := query.db.Exec(realSql, values...)
+	result, err := q.db.Exec(realSql, values...)
 	if err != nil {
 		return 0, err
 	}
@@ -158,6 +161,16 @@ func (query *Query) Insert(data interface{}) (int64, error) {
 }
 
 func (q *Query) Where(w interface{}, args ...interface{}) *Query {
+	if where, err := where("and", w, args...); err != nil {
+		q.errs = append(q.errs, err.Error())
+	} else {
+		q.wheres = append(q.wheres, where)
+	}
+	return q
+}
+func (q *Query) WhereIn(w string, args ...interface{}) *Query {
+	argsReapt := strings.Trim(strings.Repeat(",?", len(args)), ",")
+	w = fmt.Sprintf("%s in (%s)", w, argsReapt)
 	if where, err := where("and", w, args...); err != nil {
 		q.errs = append(q.errs, err.Error())
 	} else {
@@ -189,8 +202,7 @@ func (q *Query) Order(ord string, asc bool) *Query {
 	q.order = fmt.Sprintf("order by %s %s", ord, t)
 	return q
 }
-
-func (q *Query) toSql() (string, []interface{}) {
+func (q *Query) where() (string, []interface{}) {
 	where := ""
 	args := make([]interface{}, 0)
 	if len(q.wheres) > 0 {
@@ -201,9 +213,7 @@ func (q *Query) toSql() (string, []interface{}) {
 		}
 		where = "where " + strings.Join(t, " and ")
 	}
-	replacer := strings.NewReplacer("%field%", strings.Join(q.field, ","), "%table%", q.table, "%where%", where, "%order%", q.order, "%limit%", q.limit, "%offset%", q.offset)
-	sqlStr := replacer.Replace(SELECTSQL)
-	return sqlStr, args
+	return where, args
 }
 func (q *Query) Select(dest interface{}) error {
 	if len(q.errs) > 0 {
@@ -248,7 +258,9 @@ func (q *Query) Select(dest interface{}) error {
 		q.Limit(1)
 	}
 	//todo
-	tmpSql, args := q.toSql()
+	where, args := q.where()
+	replacer := strings.NewReplacer("%field%", strings.Join(q.field, ","), "%table%", q.table, "%where%", where, "%order%", q.order, "%limit%", q.limit, "%offset%", q.offset)
+	tmpSql := replacer.Replace(SELECTSQL)
 	rows, err := q.db.Query(tmpSql, args...)
 	if err != nil {
 		return err
@@ -371,6 +383,64 @@ func (q *Query) setElem(rows *sql.Rows, t reflect.Type) (reflect.Value, error) {
 		return reflect.ValueOf(nil), err
 	}
 	return dest, nil
+}
+
+func (q *Query) Update(src interface{}) (int64, error) {
+	if len(q.errs) != 0 {
+		return 0, errors.New(strings.Join(q.errs, "\n"))
+	}
+	v := reflect.ValueOf(src)
+	for v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+	var updated string
+	var keys []string
+	var values []interface{}
+	switch v.Kind() {
+	case reflect.String:
+		updated = v.Interface().(string)
+	case reflect.Struct:
+		keys, values = sKv(v)
+	case reflect.Map:
+		keys, values, _ = mKv(v)
+	default:
+		return 0, errors.New("不支持的类型")
+	}
+	if updated == "" {
+		if len(keys) != len(values) {
+			return 0, errors.New("更新的字段无法对应")
+		}
+		kvs := make([]string, 0)
+		for _, key := range keys {
+			kvs = append(kvs, fmt.Sprintf("%s=?", key))
+		}
+		updated = strings.Join(kvs, ",")
+	}
+	where, args := q.where()
+	values = append(values, args...)
+	replacer := strings.NewReplacer("%table%", q.table, "%update%", updated, "%where%", where)
+	tmpSql := replacer.Replace(UPDATESQL)
+	result, err := q.db.Exec(tmpSql, values...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+func (q *Query) Delete() (int64, error) {
+	if len(q.errs) != 0 {
+		return 0, errors.New(strings.Join(q.errs, "\n"))
+	}
+	if len(q.wheres) == 0 {
+		return 0, errors.New("删除条件不能为空")
+	}
+	where, args := q.where()
+	replacer := strings.NewReplacer("%table%", q.table, "%where%", where)
+	tmpSql := replacer.Replace(DELSQL)
+	result, err := q.db.Exec(tmpSql, args...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 func sk(value reflect.Value) []string {
 	var keys []string
