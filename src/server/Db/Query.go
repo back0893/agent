@@ -25,7 +25,6 @@ type Where struct {
 }
 
 func (w Where) GetWhere() string {
-
 	return w.where
 }
 func (w Where) GetArgs() []interface{} {
@@ -343,7 +342,22 @@ func address(dest reflect.Value, columns []string) []interface{} {
 			}
 			for _, col := range columns {
 				if col == column {
-					addrs = append(addrs, vf.Addr().Interface())
+					switch vf.Kind() {
+					case reflect.String:
+						addrs = append(addrs, &sql.NullString{})
+					case reflect.Bool:
+						addrs = append(addrs, &sql.NullBool{})
+					case reflect.Int64:
+						addrs = append(addrs, &sql.NullInt64{})
+					case reflect.Int32:
+						addrs = append(addrs, &sql.NullInt32{})
+					case reflect.Struct:
+						addrs = append(addrs, &sql.NullTime{})
+					case reflect.Float64:
+						addrs = append(addrs, &sql.NullFloat64{})
+					default:
+						addrs = append(addrs, vf.Addr().Interface())
+					}
 					break
 				}
 			}
@@ -382,7 +396,27 @@ func (q *Query) setElem(rows *sql.Rows, t reflect.Type) (reflect.Value, error) {
 	if err := rows.Scan(addrs...); err != nil {
 		return reflect.ValueOf(nil), err
 	}
-	return dest, nil
+
+	v := dest.Elem()
+	if v.Kind() == reflect.Struct && v.Type().Name() != "time" {
+		for i, addr := range addrs {
+			switch addr.(type) {
+			case *sql.NullString:
+				v.Field(i).SetString(addr.(*sql.NullString).String)
+			case *sql.NullTime:
+				v.Field(i).Set(reflect.ValueOf(addr.(*sql.NullTime).Time))
+			case *sql.NullInt64:
+				v.Field(i).SetInt(addr.(*sql.NullInt64).Int64)
+			case *sql.NullInt32:
+				v.Field(i).Set(reflect.ValueOf(addr.(*sql.NullInt32).Int32))
+			case *sql.NullFloat64:
+				v.Field(i).SetFloat(addr.(*sql.NullFloat64).Float64)
+			case *sql.NullBool:
+				v.Field(i).SetBool(addr.(*sql.NullBool).Bool)
+			}
+		}
+	}
+	return v.Addr(), nil
 }
 
 func (q *Query) Update(src interface{}) (int64, error) {
