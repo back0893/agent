@@ -31,8 +31,13 @@ func (w Where) GetArgs() []interface{} {
 	return w.args
 }
 
+type Dba interface {
+	Query(string, ...interface{}) (*sql.Rows, error)
+	Prepare(string) (*sql.Stmt, error)
+	Exec(str string, args ...interface{}) (sql.Result, error)
+}
 type Query struct {
-	db     *sql.DB
+	db     Dba
 	table  string
 	wheres []*Where
 	field  []string
@@ -536,9 +541,44 @@ func where(logic string, w interface{}, args ...interface{}) (*Where, error) {
 	}
 
 }
-func Table(db *sql.DB, tableName string) *Query {
-	return &Query{
-		db:    db,
-		table: tableName,
+func Table(db *sql.DB, tableName string) func(...Dba) *Query {
+	return func(tx ...Dba) *Query {
+		if len(tx) == 1 {
+			return &Query{
+				db:    tx[0],
+				table: tableName,
+			}
+		}
+		return &Query{
+			db:    db,
+			table: tableName,
+		}
 	}
+}
+
+func Transaction(db *sql.DB, f func(dba Dba) error) (err error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(); err != nil {
+				panic(err)
+			}
+			return
+		}
+		if p := recover(); p != nil {
+			if err := tx.Rollback(); err != nil {
+				panic(err)
+			}
+			err = fmt.Errorf("事物执行出现致命错误:%v", err)
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			panic(err)
+		}
+	}()
+	err = f(tx)
+	return err
 }
