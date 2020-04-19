@@ -6,10 +6,11 @@ type Cpu struct {
 }
 
 type Disk struct {
-	Free   uint64
-	Total  uint64
-	Used   uint64
-	FsFile string
+	Free    uint64
+	Total   uint64
+	Used    uint64
+	FsFile  string
+	Percent float64
 }
 
 type LoadAvg struct {

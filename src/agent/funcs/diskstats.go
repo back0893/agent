@@ -24,10 +24,11 @@ func DiskUseMetrics() ([]*model2.Disk, error) {
 			return nil, err
 		}
 		disk := &model2.Disk{
-			FsFile: deviceUsage.FsFile,
-			Free:   deviceUsage.BlocksFree,
-			Total:  deviceUsage.BlocksAll,
-			Used:   deviceUsage.BlocksUsed,
+			FsFile:  deviceUsage.FsFile,
+			Free:    deviceUsage.BlocksFree,
+			Total:   deviceUsage.BlocksAll,
+			Used:    deviceUsage.BlocksUsed,
+			Percent: deviceUsage.BlocksUsedPercent,
 		}
 		disks = append(disks, disk)
 	}

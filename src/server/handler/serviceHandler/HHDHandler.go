@@ -41,10 +41,8 @@ func (H HHDHandler) Handler(ctx context.Context, service *model.ServiceResponse,
 				continue
 			}
 		}
-
-		ratio := g.Round(float64(disk.Used)/float64(disk.Total), 2)
 		created_at := g.CSTTime()
-		if _, err := db.Exec("insert cc_server_disk_log (`disk_id`,`usage_ratio`,`created_at`) values (?,?,?)", serverDisk.Id, ratio, created_at); err != nil {
+		if _, err := db.Exec("insert cc_server_disk_log (`disk_id`,`usage_ratio`,`created_at`) values (?,?,?)", serverDisk.Id, g.Round(disk.Percent, 2), created_at); err != nil {
 			continue
 		}
 	}
