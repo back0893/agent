@@ -2,8 +2,8 @@ package g
 
 import (
 	"agent/src"
+	iface2 "agent/src/g/iface"
 	"agent/src/server/handler"
-	serverFace "agent/src/server/iface"
 	"context"
 	"github.com/back0893/goTcp/iface"
 	"sync"
@@ -11,7 +11,7 @@ import (
 
 func NewEvent() *Event {
 	e := &Event{
-		methods: make(map[int32]serverFace.HandlerMethod),
+		methods: make(map[int32]iface2.IHandlerMethod),
 	}
 	e.AddHandlerMethod(0, &handler.DefaultMethod{})
 	return e
@@ -19,15 +19,15 @@ func NewEvent() *Event {
 
 type Event struct {
 	lock    sync.RWMutex
-	methods map[int32]serverFace.HandlerMethod
+	methods map[int32]iface2.IHandlerMethod
 }
 
-func (e *Event) AddHandlerMethod(id int32, fn serverFace.HandlerMethod) {
+func (e *Event) AddHandlerMethod(id int32, fn iface2.IHandlerMethod) {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	e.methods[id] = fn
 }
-func (e *Event) GetMethod(id int32) serverFace.HandlerMethod {
+func (e *Event) GetMethod(id int32) iface2.IHandlerMethod {
 	e.lock.RLock()
 	defer e.lock.RUnlock()
 	fn, ok := e.methods[id]

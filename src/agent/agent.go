@@ -2,6 +2,7 @@ package agent
 
 import (
 	"agent/src"
+	"agent/src/agent/handler"
 	"agent/src/g"
 	"context"
 	"fmt"
@@ -16,14 +17,14 @@ import (
 )
 
 type Agent struct {
-	con          iface.IConnection
-	conEvent     iface.IEventWatch
-	protocol     iface.IProtocol
-	ctx          context.Context
-	ctxCancel    context.CancelFunc
-	isStop       *src.AtomicInt64
-	wg           *sync.WaitGroup
-	cfg          string //配置文件的路径
+	con       iface.IConnection
+	conEvent  iface.IEventWatch
+	protocol  iface.IProtocol
+	ctx       context.Context
+	ctxCancel context.CancelFunc
+	isStop    *src.AtomicInt64
+	wg        *sync.WaitGroup
+	cfg       string //配置文件的路径
 }
 
 func (a *Agent) GetCon() iface.IConnection {
@@ -108,19 +109,20 @@ func NewAgent(cfg string) (*Agent, error) {
 		return nil, err
 	}
 	agent := &Agent{
-		isStop:       src.NewAtomicInt64(0),
-		conEvent:     net.NewEventWatch(),
-		wg:           &sync.WaitGroup{},
-		cfg:          cfg,
+		isStop:   src.NewAtomicInt64(0),
+		conEvent: net.NewEventWatch(),
+		wg:       &sync.WaitGroup{},
+		cfg:      cfg,
 	}
 
 	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), g.AGENT, agent))
 	agent.AddProtocol(src.Protocol{})
-	event:=NewEvent()
+	event := NewEvent()
 
-	event.AddHandlerMethod(g.STOP, func)
-
-
+	event.AddHandlerMethod(g.PortListenListResponse, handler.Ports{})
+	event.AddHandlerMethod(g.MinePluginsResponse, handler.Plugins{})
+	event.AddHandlerMethod(g.AuthSuccess, handler.AuthSuccess{})
+	event.AddHandlerMethod(g.AuthFail, handler.AuthFail{})
 
 	agent.AddEvent(event)
 
