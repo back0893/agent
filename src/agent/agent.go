@@ -24,7 +24,6 @@ type Agent struct {
 	isStop       *src.AtomicInt64
 	wg           *sync.WaitGroup
 	cfg          string //配置文件的路径
-	servicesList *ServicesList
 }
 
 func (a *Agent) GetCon() iface.IConnection {
@@ -113,12 +112,17 @@ func NewAgent(cfg string) (*Agent, error) {
 		conEvent:     net.NewEventWatch(),
 		wg:           &sync.WaitGroup{},
 		cfg:          cfg,
-		servicesList: NewServicesList(),
 	}
 
 	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), g.AGENT, agent))
 	agent.AddProtocol(src.Protocol{})
-	agent.AddEvent(Event{})
+	event:=NewEvent()
+
+	event.AddHandlerMethod(g.STOP, func)
+
+
+
+	agent.AddEvent(event)
 
 	//断线重连
 	agent.AddClose(agent.ReCon)
@@ -126,16 +130,6 @@ func NewAgent(cfg string) (*Agent, error) {
 	//初始化定时器
 	fmt.Println("init timer")
 	src.InitTimingWheel(agent.GetContext())
-
-	//初始化基础服务,比如心跳,内存使用情况
-	agent.servicesList.BaseService()
-	//新增在结束时,保存
-	agent.AddClose(func(ctx context.Context, connection iface.IConnection) {
-		ctx.Value(g.AGENT).(*Agent).servicesList.Sleep()
-	})
-	//新增一个服务的定时监控
-	src.AddTimer(5*time.Second, agent.servicesList.Listen)
-	go agent.servicesList.RunServiceAction()
 
 	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 

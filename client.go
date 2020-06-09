@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"os"
-	"syscall"
 )
 
 func start(cfg string) {
@@ -15,15 +14,12 @@ func start(cfg string) {
 	if err != nil {
 		panic(err)
 	}
+
 	agentClient.Start()
-	g.SavePid("./pid")
 	utils.GlobalConfig.Set(g.AGENT, agentClient)
 	agentClient.Wait()
 }
-func stop() {
-	pid := g.ReadPid("./pid")
-	_ = syscall.Kill(pid, syscall.SIGKILL)
-}
+
 func main() {
 	var action string
 	var cfg string
@@ -36,8 +32,6 @@ func main() {
 	switch action {
 	case "start":
 		start(cfg)
-	case "stop":
-		stop()
 	case "version":
 		fmt.Printf("当前版本:%d\n", g.VERSION)
 	default:

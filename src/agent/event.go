@@ -11,7 +11,15 @@ import (
 	"log"
 )
 
-type Event struct{}
+type Event struct {
+	*g.Event
+}
+
+func NewEvent() *Event {
+	return &Event{
+		g.NewEvent(),
+	}
+}
 
 func (a Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 	//这个时候发送身份识别
@@ -70,10 +78,6 @@ func (a Event) OnMessage(ctx context.Context, packet iface.IPacket, connection i
 		pkt.Id = g.Response
 		connection.Write(pkt)
 	case g.AuthSuccess:
-		//认真成功,主动请求,启动的services
-		pkt := src.NewPkt()
-		pkt.Id = g.Services
-		connection.Write(pkt)
 
 	case g.AuthFail:
 		//认真失败...

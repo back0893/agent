@@ -1,13 +1,11 @@
-package server
+package g
 
 import (
 	"agent/src"
-	"agent/src/g/model"
 	"agent/src/server/handler"
 	serverFace "agent/src/server/iface"
 	"context"
 	"github.com/back0893/goTcp/iface"
-	"log"
 	"sync"
 )
 
@@ -38,12 +36,10 @@ func (e *Event) GetMethod(id int32) serverFace.HandlerMethod {
 	}
 	return e.methods[0]
 }
-func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
-	SetTimeOut(connection.GetRawCon())
+func (e *Event) OnConnect(context.Context, iface.IConnection) {
 }
 
 func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection iface.IConnection) {
-	SetTimeOut(connection.GetRawCon())
 	pkt := packet.(*src.Packet)
 	id := pkt.Id
 	fn := e.GetMethod(id)
@@ -51,8 +47,4 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 }
 
 func (Event) OnClose(ctx context.Context, connection iface.IConnection) {
-	if v, ok := connection.GetExtraData("auth"); ok {
-		auth := v.(*model.Auth)
-		log.Printf("用户%s断开连接", auth.Username)
-	}
 }
