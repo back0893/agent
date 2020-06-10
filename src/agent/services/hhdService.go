@@ -1,7 +1,6 @@
 package services
 
 import (
-	"agent/src"
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
@@ -23,7 +22,7 @@ func (m HHDService) Info() {
 		return
 	}
 	info.Info, err = g.EncodeData(disks)
-	pkt := src.ServiceResponsePkt(info)
+	pkt := g.ServiceResponsePkt(info)
 	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 	err = a.GetCon().Write(pkt)
 	if err != nil {

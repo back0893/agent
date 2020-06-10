@@ -3,5 +3,10 @@
   "port": 8001,
   "username": "agent2",
   "password": "123456",
-  "heartBeat": "10"
+  "heartBeat": "10",
+  "debug": true,
+  "plugin": {
+    "dir": "/mnt/f/code/agent/plugins",
+    "log": "/mnt/f/code/agent/plugins"
+  }
 }

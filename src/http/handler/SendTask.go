@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"agent/src"
 	"agent/src/g"
 	model2 "agent/src/g/model"
 	"encoding/json"
@@ -34,7 +33,7 @@ func WrapperSendTask(s iface.IServer) func(http.ResponseWriter, *http.Request) {
 			io.WriteString(writer, fmt.Sprintf("%s不存在或者没有上线", action.Agent))
 			return
 		}
-		pkt := src.ServicePkt(model2.NewService(action.Service, action.Action, action.Args))
+		pkt := g.ServicePkt(model2.NewService(action.Service, action.Action, action.Args))
 		con.Write(pkt)
 		//todo 连接到tcp发送消息
 		writer.Write([]byte("ok"))

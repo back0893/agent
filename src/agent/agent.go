@@ -2,6 +2,7 @@ package agent
 
 import (
 	"agent/src"
+	"agent/src/agent/cron"
 	"agent/src/agent/handler"
 	"agent/src/agent/plugins"
 	"agent/src/g"
@@ -118,7 +119,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	}
 
 	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), g.AGENT, agent))
-	agent.AddProtocol(src.Protocol{})
+	agent.AddProtocol(g.Protocol{})
 	event := NewEvent()
 
 	event.AddHandlerMethod(g.PortListenListResponse, handler.Ports{})
@@ -127,7 +128,6 @@ func NewAgent(cfg string) (*Agent, error) {
 	event.AddHandlerMethod(g.AuthFail, handler.AuthFail{})
 
 	agent.AddEvent(event)
-
 	//断线重连
 	agent.AddClose(agent.ReCon)
 
@@ -139,6 +139,12 @@ func NewAgent(cfg string) (*Agent, error) {
 	desiredAll := plugins.ListPlugins(utils.GlobalConfig.GetString("plugin.dir"))
 	plugins.DelNoUsePlugins(desiredAll)
 	plugins.AddNewPlugins(desiredAll)
+
+	//认真成功,主动请求,启动的services
+	//初始化服务器的数据收集
+	BuildMappers()
+	//定时更新cpu的使用情况
+	cron.InitDatHistory()
 
 	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 

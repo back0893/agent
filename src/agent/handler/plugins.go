@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"agent/src"
 	"agent/src/agent/plugins"
+	"agent/src/g"
 	"agent/src/g/model"
-	"bytes"
 	"context"
-	"encoding/gob"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/utils"
 	"log"
@@ -15,10 +13,9 @@ import (
 type Plugins struct {
 }
 
-func (p Plugins) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
-	decoder := gob.NewDecoder(bytes.NewReader(packet.Data))
+func (p Plugins) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
 	repPlugins := model.Plugins{}
-	if err := decoder.Decode(&repPlugins); err != nil {
+	if err := g.DecodeData(packet.Data, &repPlugins); err != nil {
 		log.Println(err)
 		return
 	}

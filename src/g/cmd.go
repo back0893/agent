@@ -1,10 +1,10 @@
-package cmd
+package g
 
 import (
 	"bytes"
 	"github.com/toolkits/sys"
+	"log"
 	"os/exec"
-	"syscall"
 	"time"
 )
 
@@ -23,12 +23,19 @@ func (command *Command) Run() error {
 	cmd.Stdout = &stdout
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	log.Println(cmd.Args)
+	//cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
 		return err
 	}
 
-	err, isTimeout := sys.CmdRunWithTimeout(cmd, time.Duration(command.Timeout)*time.Millisecond)
-	command.Callback(stdout, stderr, err, isTimeout)
+	if command.Timeout <= 0 {
+		//如果超时小于0那么不需要超时
+		err := cmd.Wait()
+		command.Callback(stdout, stderr, err, false)
+	} else {
+		err, isTimeout := sys.CmdRunWithTimeout(cmd, time.Duration(command.Timeout)*time.Millisecond)
+		command.Callback(stdout, stderr, err, isTimeout)
+	}
 	return nil
 }

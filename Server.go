@@ -15,6 +15,7 @@ import (
 	"github.com/back0893/goTcp/utils"
 	"github.com/pkg/errors"
 	"log"
+	"time"
 )
 
 var (
@@ -52,6 +53,7 @@ func main() {
 	flag.Parse()
 	//加载
 	g.LoadInit(config)
+	//g.SetLogWrite()
 
 	s := net.NewServer()
 	src.InitTimingWheel(s.GetContext())
@@ -61,15 +63,35 @@ func main() {
 	新增对应的处理方法
 	*/
 	event.AddHandlerMethod(g.Auth, ServiceHandler.NewAuthHandler())
-	event.AddHandlerMethod(g.ServiceResponse, ServiceHandler.NewServiceResponse())
 	event.AddHandlerMethod(g.PING, ServiceHandler.NewPing())
-	event.AddHandlerMethod(0, ServiceHandler.NewDefaultMethod())
+	event.AddHandlerMethod(g.MinePlugins, ServiceHandler.NewPluginsHandler())
+	//event.AddHandlerMethod(g.PortListenListResponse, ServiceHandler.NewPing())
+	event.AddHandlerMethod(g.ServiceResponse, ServiceHandler.NewServiceResponse())
 
 	s.AddEvent(event)
-	s.AddProtocol(&src.Protocol{})
+	s.AddProtocol(&g.Protocol{})
 
 	ip := utils.GlobalConfig.GetString("Ip")
 	port := utils.GlobalConfig.GetInt("Port")
+
+	//启动定时,删除长时间没有心跳的连接
+	go func(server *net.Server) {
+		server.GetConnections().Range(func(key, value interface{}) bool {
+			conn := value.(iface.IConnection)
+			if last, ok := conn.GetExtraData("last_ping"); ok {
+				last_ping := last.(int64)
+				if time.Now().Unix()-last_ping >= utils.GlobalConfig.GetInt64("heartTimeOut") {
+					log.Println("delete con")
+					conn.Close()
+					server.DeleteCon(conn)
+				}
+			} else {
+				conn.Close()
+				server.DeleteCon(conn)
+			}
+			return true
+		})
+	}(s)
 
 	//启动http
 	//http使用tcp连接上来,然后由这个转发给各个agent

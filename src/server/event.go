@@ -6,6 +6,7 @@ import (
 	"context"
 	"github.com/back0893/goTcp/iface"
 	"log"
+	"time"
 )
 
 func NewEvent() *Event {
@@ -20,6 +21,7 @@ type Event struct {
 
 func (e *Event) OnConnect(ctx context.Context, connection iface.IConnection) {
 	log.Printf("连接%d", connection.GetId())
+	connection.SetExtraData("last_ping", time.Now().Unix())
 }
 
 func (Event) OnClose(ctx context.Context, connection iface.IConnection) {

@@ -1,7 +1,6 @@
 package services
 
 import (
-	"agent/src"
 	"agent/src/agent/funcs"
 	"agent/src/agent/iface"
 	"agent/src/g"
@@ -54,7 +53,7 @@ func (s *ServerService) Info() {
 		return
 	}
 	info.Info = data
-	pkt := src.ServiceResponsePkt(info)
+	pkt := g.ServiceResponsePkt(info)
 	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 	err = a.GetCon().Write(pkt)
 	if err != nil {

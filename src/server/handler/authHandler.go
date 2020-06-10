@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"agent/src"
 	"agent/src/g"
 	"agent/src/g/model"
 	"agent/src/server/db"
@@ -17,7 +16,7 @@ func NewAuthHandler() *AuthHandler {
 
 type AuthHandler struct{}
 
-func (AuthHandler) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
+func (AuthHandler) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
 	var auth model.Auth
 	if err := g.DecodeData(packet.Data, &auth); err != nil {
 		log.Println("读取登录信息失败,关闭连接")
@@ -43,10 +42,4 @@ func (AuthHandler) Handler(ctx context.Context, packet *src.Packet, connection i
 	for _, s := range ccService {
 		service[s.TemplateId] = s.Status
 	}
-	//用户登录成功否下发服务
-	packet.Id = g.ServicesList
-
-	packet.Data, _ = g.EncodeData(service)
-
-	connection.Write(packet)
 }

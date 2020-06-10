@@ -1,4 +1,4 @@
-package funcs
+package agent
 
 import (
 	"agent/src/agent/iface"
@@ -12,12 +12,10 @@ type FuncsAndInterval struct {
 }
 
 var Mappers []FuncsAndInterval
-var portChan chan int64
 
 func BuildMappers() {
-	interval := utils.GlobalConfig.GetInt("device.interval")
+	interval := utils.GlobalConfig.GetInt("heartBeat")
 	portService := services.NewPortService([]int64{})
-	portChan = make(chan int64, 10)
 	Mappers = []FuncsAndInterval{
 		{
 			Fs: []iface.IService{
@@ -34,14 +32,5 @@ func BuildMappers() {
 			Interval: interval,
 		},
 	}
-	go func() {
-		for port := range portChan {
-			portService.Ports = append(portService.Ports, port)
-		}
-	}()
-}
-func AppendPorts(ports ...int64) {
-	for _, port := range ports {
-		portChan <- port
-	}
+
 }

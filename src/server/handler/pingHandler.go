@@ -1,9 +1,10 @@
 package handler
 
 import (
-	"agent/src"
+	"agent/src/g"
 	"context"
 	"github.com/back0893/goTcp/iface"
+	"time"
 )
 
 func NewPing() *Ping {
@@ -12,8 +13,9 @@ func NewPing() *Ping {
 
 type Ping struct{}
 
-func (Ping) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
+func (Ping) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
+	connection.SetExtraData("last_ping", time.Now().Unix())
 	//todo 心跳需要做的事情
-	pkt := src.ComResponse()
+	pkt := g.ComResponse()
 	connection.Write(pkt)
 }

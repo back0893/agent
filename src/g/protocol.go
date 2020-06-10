@@ -1,7 +1,6 @@
-package src
+package g
 
 import (
-	"agent/src/g"
 	"encoding/binary"
 	"errors"
 	"github.com/back0893/goTcp/iface"
@@ -40,7 +39,7 @@ func (Protocol) UnPack(conn iface.IConnection) (iface.IPacket, error) {
 	}
 
 	//固定负载数据
-	length := pkt.Length - g.HeaderLength
+	length := pkt.Length - HeaderLength
 	if length < 0 {
 		log.Println("长度不足", pkt.Id, pkt.Length, pkt.Timestamp)
 		return nil, errors.New("长度不足")

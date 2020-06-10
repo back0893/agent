@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"agent/src"
 	"agent/src/g"
 	"agent/src/g/model"
 	"agent/src/server/handler/serviceHandler"
@@ -23,7 +22,6 @@ func NewServiceResponse() *ServiceResponse {
 	sr.AddHandlerMethod(g.BaseServerInfo, serviceHandler.NewBaseServerInfo())
 	sr.AddHandlerMethod(g.HHD, serviceHandler.NewHHDHandler())
 	sr.AddHandlerMethod(g.PortListen, serviceHandler.NewPortService())
-	sr.AddHandlerMethod(g.REDISSERVICE, serviceHandler.NewRedisService())
 	return sr
 }
 func (sr *ServiceResponse) AddHandlerMethod(id int, fn serverFace.ServiceMethod) {
@@ -37,7 +35,7 @@ func (sr *ServiceResponse) GetMethod(id int) serverFace.ServiceMethod {
 	return nil
 }
 
-func (sr *ServiceResponse) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
+func (sr *ServiceResponse) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
 	service := &model.ServiceResponse{}
 	if err := g.DecodeData(packet.Data, service); err != nil {
 		log.Println(err)
@@ -53,7 +51,7 @@ func (sr *ServiceResponse) Handler(ctx context.Context, packet *src.Packet, conn
 		fmt.Println(err)
 	} else {
 		//todo 处理成功后通用操作
-		pkt := src.ComResponse()
+		pkt := g.ComResponse()
 		connection.Write(pkt)
 	}
 }

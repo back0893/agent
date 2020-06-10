@@ -1,7 +1,6 @@
-package src
+package g
 
 import (
-	"agent/src/g"
 	"bytes"
 	"encoding/binary"
 	"github.com/back0893/goTcp/iface"
@@ -27,7 +26,7 @@ func NewPkt() *Packet {
 }
 
 func (pkt *Packet) Len() int {
-	var length int = g.HeaderLength
+	var length int = HeaderLength
 	length += len(pkt.Data)
 	return length
 }
@@ -59,7 +58,7 @@ func (pkt *Packet) Serialize() ([]byte, error) {
 */
 func ComResponse() iface.IPacket {
 	pkt := NewPkt()
-	pkt.Id = g.Response
+	pkt.Id = Response
 	return pkt
 }
 
@@ -68,8 +67,8 @@ func ComResponse() iface.IPacket {
 */
 func ServicePkt(data interface{}) iface.IPacket {
 	pkt := NewPkt()
-	pkt.Id = g.Service
-	pkt.Data, _ = g.EncodeData(data)
+	pkt.Id = 0
+	pkt.Data, _ = EncodeData(data)
 	return pkt
 }
 
@@ -78,7 +77,7 @@ func ServicePkt(data interface{}) iface.IPacket {
 */
 func ServiceResponsePkt(data interface{}) iface.IPacket {
 	pkt := NewPkt()
-	pkt.Id = g.ServiceResponse
-	pkt.Data, _ = g.EncodeData(data)
+	pkt.Id = ServiceResponse
+	pkt.Data, _ = EncodeData(data)
 	return pkt
 }

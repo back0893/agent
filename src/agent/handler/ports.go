@@ -1,8 +1,7 @@
 package handler
 
 import (
-	"agent/src"
-	"agent/src/agent/funcs"
+	"agent/src/g"
 	"bytes"
 	"context"
 	"encoding/gob"
@@ -13,11 +12,10 @@ import (
 type Ports struct {
 }
 
-func (p Ports) Handler(ctx context.Context, packet *src.Packet, connection iface.IConnection) {
+func (p Ports) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
 	decoder := gob.NewDecoder(bytes.NewReader(packet.Data))
 	ports := make([]int64, 0)
 	if err := decoder.Decode(&ports); err != nil {
 		log.Println(err)
 	}
-	funcs.AppendPorts(ports...)
 }

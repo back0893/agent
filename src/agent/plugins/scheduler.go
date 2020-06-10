@@ -1,10 +1,8 @@
 package plugins
 
 import (
-	"agent/src"
 	"agent/src/agent/iface"
 	"agent/src/g"
-	cmd2 "agent/src/g/cmd"
 	"agent/src/g/model"
 	"bytes"
 	"encoding/json"
@@ -24,8 +22,12 @@ type PluginScheduler struct {
 func NewPluginScheduler(p *Plugin) *PluginScheduler {
 	scheduler := PluginScheduler{
 		Plugin: p,
-		Ticker: time.NewTicker(time.Duration(p.Interval) * time.Second),
 		Quit:   make(chan struct{}),
+	}
+	if p.Interval > 0 {
+		scheduler.Ticker = time.NewTicker(time.Duration(p.Interval) * time.Second)
+	} else {
+		scheduler.Ticker = time.NewTicker(1 * time.Second)
 	}
 	return &scheduler
 }
@@ -36,6 +38,9 @@ func (this *PluginScheduler) Schedule() {
 			select {
 			case <-this.Ticker.C:
 				PluginRun(this.Plugin)
+				if !this.Plugin.IsRepeat {
+					this.Stop()
+				}
 			case <-this.Quit:
 				this.Ticker.Stop()
 				return
@@ -51,6 +56,9 @@ func (this *PluginScheduler) Stop() {
 func PluginRun(plugin *Plugin) {
 
 	timeout := plugin.Interval*1000 - 500
+	if plugin.IsRepeat == false {
+		timeout = 0
+	}
 	fpath := filepath.Join(utils.GlobalConfig.GetString("plugin.dir"), plugin.FilePath)
 
 	if !file.IsExist(fpath) {
@@ -62,7 +70,7 @@ func PluginRun(plugin *Plugin) {
 	if debug {
 		log.Println(fpath, "running...")
 	}
-	cmd := cmd2.Command{
+	cmd := g.Command{
 		Name:    fpath,
 		Args:    []string{},
 		Timeout: timeout,
@@ -102,16 +110,18 @@ func PluginRun(plugin *Plugin) {
 			}
 			return
 		}
-
+		if debug {
+			log.Println(string(data))
+			return
+		}
 		var metrics []*model.MetricValue
 		err = json.Unmarshal(data, &metrics)
 		if err != nil {
 			log.Print(err)
 			return
 		}
-
 		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-		pkt := src.NewPkt()
+		pkt := g.NewPkt()
 		if pkt.Data, err = g.EncodeData(metrics); err != nil {
 			log.Print(err)
 			return
@@ -122,7 +132,7 @@ func PluginRun(plugin *Plugin) {
 	}
 	go func() {
 		if err := cmd.Run(); err != nil {
-			log.Println(err)
+			log.Println("[err]", err)
 		}
 	}()
 }

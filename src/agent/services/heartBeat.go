@@ -1,7 +1,6 @@
 package services
 
 import (
-	"agent/src"
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"github.com/back0893/goTcp/utils"
@@ -20,7 +19,7 @@ func NewHeartBeatService() *HeartBeatService {
 	return &HeartBeatService{}
 }
 func (m *HeartBeatService) Info() {
-	pkt := src.NewPkt()
+	pkt := g.NewPkt()
 	pkt.Id = g.PING
 	a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 	if err := a.GetCon().Write(pkt); err != nil {

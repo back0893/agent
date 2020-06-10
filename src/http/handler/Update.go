@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"agent/src"
 	"agent/src/g"
 	"encoding/json"
 	"fmt"
@@ -29,7 +28,7 @@ func WrapperUpdate(s iface.IServer) func(http.ResponseWriter, *http.Request) {
 			io.WriteString(writer, fmt.Sprintf("%s不存在或者没有上线", info.Agent))
 			return
 		}
-		pkt := src.NewPkt()
+		pkt := g.NewPkt()
 		pkt.Id = g.UPDATE
 		pkt.Data, _ = g.EncodeData(info)
 		con.Write(pkt)

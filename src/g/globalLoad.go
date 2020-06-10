@@ -26,7 +26,7 @@ func runtimeDir() (string, error) {
 	return filePath, nil
 }
 
-func setLogWrite() {
+func SetLogWrite() {
 	file, err := runtimeDir()
 	if err != nil {
 		log.Println("无法接入日志")
@@ -42,7 +42,6 @@ func setLogWrite() {
 }
 func LoadInit(file string) {
 	utils.GlobalConfig.Load("json", file)
-	setLogWrite()
 }
 func GetRuntimePath() string {
 	var path string

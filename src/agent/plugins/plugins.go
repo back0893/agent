@@ -1,25 +1,23 @@
 package plugins
 
 import (
-	"agent/src"
-	"agent/src/agent/iface"
 	"agent/src/g"
-	cmd2 "agent/src/g/cmd"
 	"agent/src/g/model"
 	"bytes"
-	"encoding/json"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"github.com/toolkits/file"
 	"log"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 type Plugin struct {
 	FilePath string
 	Interval int
+	IsRepeat bool
 }
 
 var (
@@ -68,24 +66,26 @@ func Git(dir string, repPlugins *model.Plugins) {
 	if len(repPlugins.Uri) == 0 {
 		ClearAllPlugins()
 	}
+	file.InsureDir(dir)
 
 	for _, uri := range repPlugins.Uri {
 		//去掉尾部的扩展名.git
-		name := strings.Replace(".git", "", path.Base(uri), 1)
+		name := strings.Replace(path.Base(uri), ".git", "", 1)
 		dirPath := filepath.Join(dir, name)
-		var cmd cmd2.Command
+		var cmd g.Command
+		fmt.Println(dirPath)
 		if file.IsExist(dirPath) {
-			cmd = cmd2.Command{
+			cmd = g.Command{
 				Name:    "git",
 				Args:    []string{"pull"},
-				Timeout: 60,
+				Timeout: 60 * 1000,
 				Dir:     dirPath,
 			}
 		} else {
-			cmd = cmd2.Command{
+			cmd = g.Command{
 				Name:    "git",
 				Args:    []string{"clone", uri},
-				Timeout: 120,
+				Timeout: 120 * 1000,
 				Dir:     dir,
 			}
 		}
@@ -112,25 +112,30 @@ func Git(dir string, repPlugins *model.Plugins) {
 				return
 			}
 
-			//回应git更新成功
-			a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-			pkt := src.NewPkt()
-
-			//todo 回应git更新成功
-			//id没有想好
-			pkt.Id = g.MinePluginsResponse
-			if err := a.GetCon().Write(pkt); err != nil {
-				log.Println(err)
-			}
+			//回应git更新成功,应该为日志
+			//a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+			//pkt := g.NewPkt()
+			//
+			////todo 回应git更新成功
+			////id没有想好
+			//pkt.Id = g.MinePluginsResponse
+			//if err := a.GetCon().Write(pkt); err != nil {
+			//	log.Println(err)
+			//}
 		}
+		wg := sync.WaitGroup{}
+		wg.Add(1)
 		go func() {
 			if err := cmd.Run(); err != nil {
 				log.Println(err)
 			}
-			desiredAll := ListPlugins(utils.GlobalConfig.GetString("plugin.dir"))
+			fmt.Println("readList")
+			desiredAll := ListPlugins("")
 			DelNoUsePlugins(desiredAll)
 			AddNewPlugins(desiredAll)
+			wg.Done()
 		}()
+		wg.Wait()
 	}
 
 }
