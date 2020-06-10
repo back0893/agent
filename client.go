@@ -14,7 +14,6 @@ func start(cfg string) {
 	if err != nil {
 		panic(err)
 	}
-
 	agentClient.Start()
 	utils.GlobalConfig.Set(g.AGENT, agentClient)
 	agentClient.Wait()

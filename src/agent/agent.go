@@ -3,11 +3,13 @@ package agent
 import (
 	"agent/src"
 	"agent/src/agent/handler"
+	"agent/src/agent/plugins"
 	"agent/src/g"
 	"context"
 	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/net"
+	"github.com/back0893/goTcp/utils"
 	"log"
 	"os"
 	"os/signal"
@@ -132,6 +134,11 @@ func NewAgent(cfg string) (*Agent, error) {
 	//初始化定时器
 	fmt.Println("init timer")
 	src.InitTimingWheel(agent.GetContext())
+
+	//启动插件扫描器
+	desiredAll := plugins.ListPlugins(utils.GlobalConfig.GetString("plugin.dir"))
+	plugins.DelNoUsePlugins(desiredAll)
+	plugins.AddNewPlugins(desiredAll)
 
 	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 

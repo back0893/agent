@@ -2,13 +2,19 @@ package model
 
 /**
 插件分为2种
-http下载,http下载使用url中token作为用户判断.
 git拉取,拉取地址和用户作为用户判断
+使用gitlab的api创建仓库和新增删除文件
+可是
 */
 type Plugins struct {
-	Type     int //作为判断为git还是http
-	Uri      string
-	Name     string //插件名称
-	Interval int    //执行时间间隔(秒)
-	Branch   string //git的分或者tag名称
+	Uri []string
+}
+
+/**
+插件的标准返回
+*/
+type MetricValue struct {
+	Id        int32       `json:"id"`        //插件编号
+	Data      interface{} `json:"value"`     //插件数据
+	Timestamp int64       `json:"timestamp"` //插件返回时间
 }
