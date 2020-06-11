@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"github.com/back0893/goTcp/utils"
 	"github.com/toolkits/file"
 	"io/ioutil"
 	"log"
@@ -11,9 +10,8 @@ import (
 )
 
 // 读取目录下 name_%d+ 类似的文件
-func ListPlugins(relativePath string) map[string]*Plugin {
+func ListPlugins(dir string) map[string]*Plugin {
 	ret := make(map[string]*Plugin)
-	dir := filepath.Join(utils.GlobalConfig.GetString("plugin.dir"), relativePath)
 	log.Println(dir)
 	if !file.IsExist(dir) || file.IsFile(dir) {
 		return ret
@@ -32,7 +30,7 @@ func ListPlugins(relativePath string) map[string]*Plugin {
 		}
 		//继续扫描
 		if f.IsDir() {
-			tmpRet := ListPlugins(filepath.Join(relativePath, f.Name()))
+			tmpRet := ListPlugins(filepath.Join(dir, f.Name()))
 			for key := range tmpRet {
 				ret[key] = tmpRet[key]
 			}
@@ -52,7 +50,7 @@ func ListPlugins(relativePath string) map[string]*Plugin {
 			continue
 		}
 
-		fpath := filepath.Join(relativePath, filename)
+		fpath := filepath.Join(dir, filename)
 		//如果间隔时间为0,意味只执行一次的插件
 		plugin := &Plugin{FilePath: fpath, Interval: interval, IsRepeat: true}
 		if interval == 0 {

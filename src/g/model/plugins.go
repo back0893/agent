@@ -14,7 +14,7 @@ type Plugins struct {
 插件的标准返回
 */
 type MetricValue struct {
-	Id        int32       `json:"id"`        //插件编号
-	Data      interface{} `json:"value"`     //插件数据
+	Metric    string      `json:"metric"`    //监控的指标名称
+	Value     interface{} `json:"value"`     //插件数据
 	Timestamp int64       `json:"timestamp"` //插件返回时间
 }

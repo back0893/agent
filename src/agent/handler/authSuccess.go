@@ -20,12 +20,14 @@ func (a AuthSuccess) Handler(ctx context.Context, packet *g.Packet, connection i
 	}
 
 	//发送通知,通知中控服务器下发监控的进程id
+	pkt = g.NewPkt()
 	pkt.Id = g.ProcessNumList
 	if err := connection.Write(pkt); err != nil {
 		log.Println(err)
 	}
 	//同步插件
 	//发送通知,通知中控服务器下发插件
+	pkt = g.NewPkt()
 	pkt.Id = g.MinePlugins
 	if err := connection.Write(pkt); err != nil {
 		log.Println(err)

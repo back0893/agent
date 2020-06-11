@@ -2,7 +2,6 @@ package g
 
 import (
 	"context"
-	"fmt"
 	"github.com/back0893/goTcp/iface"
 	"log"
 	"sync"
@@ -17,8 +16,6 @@ func NewDefaultMethod() *DefaultMethod {
 
 func (d DefaultMethod) Handler(ctx context.Context, packet *Packet, connection iface.IConnection) {
 	log.Printf("方法还未被时实现method_id===>%d", packet.Id)
-	pkt := ComResponse()
-	connection.Write(pkt)
 }
 
 func NewEvent() *Event {
@@ -55,7 +52,7 @@ func (e *Event) OnMessage(ctx context.Context, packet iface.IPacket, connection 
 	pkt := packet.(*Packet)
 	id := pkt.Id
 	fn := e.GetMethod(id)
-	fmt.Println(id)
+	log.Println(id)
 	fn.Handler(ctx, pkt, connection)
 }
 

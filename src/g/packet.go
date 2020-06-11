@@ -1,6 +1,7 @@
 package g
 
 import (
+	"agent/src/g/model"
 	"bytes"
 	"encoding/binary"
 	"github.com/back0893/goTcp/iface"
@@ -56,9 +57,10 @@ func (pkt *Packet) Serialize() ([]byte, error) {
 /**
 常用回应
 */
-func ComResponse() iface.IPacket {
+func ComResponse(id int32) iface.IPacket {
 	pkt := NewPkt()
 	pkt.Id = Response
+	pkt.Data, _ = EncodeData(model.Response{Id: id})
 	return pkt
 }
 

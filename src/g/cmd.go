@@ -16,7 +16,7 @@ type Command struct {
 	Callback func(stdout, stderr bytes.Buffer, err error, isTimeout bool)
 }
 
-func (command *Command) Run() error {
+func (command *Command) Run() {
 	cmd := exec.Command(command.Name, command.Args...)
 	cmd.Dir = command.Dir
 	var stdout bytes.Buffer
@@ -24,9 +24,10 @@ func (command *Command) Run() error {
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	log.Println(cmd.Args)
+	//不设置成独立进程,方便在agent退出时,一起退出
 	//cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := cmd.Start(); err != nil {
-		return err
+		command.Callback(stdout, stderr, err, false)
 	}
 
 	if command.Timeout <= 0 {
@@ -37,5 +38,4 @@ func (command *Command) Run() error {
 		err, isTimeout := sys.CmdRunWithTimeout(cmd, time.Duration(command.Timeout)*time.Millisecond)
 		command.Callback(stdout, stderr, err, isTimeout)
 	}
-	return nil
 }

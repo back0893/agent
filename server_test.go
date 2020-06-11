@@ -62,6 +62,9 @@ func TestServerCon(t *testing.T) {
 	if err := g.DecodeData(res.Data, &repPlugins); err != nil {
 		panic(err)
 	}
+	for _, uri := range repPlugins.Uri {
+		fmt.Println(uri)
+	}
 }
 func TestGit(t *testing.T) {
 	g.LoadInit("./client.json")
@@ -77,7 +80,7 @@ func TestReadList(t *testing.T) {
 	g.LoadInit("./client.json")
 
 	log.Println("read list")
-	desiredAll := plugins.ListPlugins("")
+	desiredAll := plugins.ListPlugins(utils.GlobalConfig.GetString("plugin.dir"))
 	for key, value := range desiredAll {
 		fmt.Println(key, value.FilePath)
 	}

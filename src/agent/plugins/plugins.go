@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"agent/src/agent/iface"
 	"agent/src/g"
 	"agent/src/g/model"
 	"bytes"
@@ -11,7 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
+	"time"
 )
 
 type Plugin struct {
@@ -90,52 +91,45 @@ func Git(dir string, repPlugins *model.Plugins) {
 			}
 		}
 		cmd.Callback = func(stdout, stderr bytes.Buffer, err error, isTimeout bool) {
+			value := model.MetricValue{
+				Metric:    "git",
+				Timestamp: time.Now().Unix(),
+				Value:     stdout.String(),
+			}
 			errStr := stderr.String()
 			if errStr != "" {
-				logFile := filepath.Join(utils.GlobalConfig.GetString("plugin.log"), "git"+".stderr.log")
-				if _, err = file.WriteString(logFile, errStr); err != nil {
-					log.Printf("[ERROR] write log to %s fail, error: %s\n", logFile, err)
-				}
+				value.Value = fmt.Sprintln("[ERROR] git update fail error:", errStr)
 			}
 
 			if isTimeout {
-				// has be killed
-				if err == nil {
-					log.Println("[INFO] git timeout and kill process")
-				}
-
-				return
+				value.Value = fmt.Sprintln("[ERROR] git timeout error:", err)
 			}
 
 			if err != nil {
-				log.Println("[ERROR] exec git fail. error:", err)
-				return
+				value.Value = fmt.Sprintln("[ERROR] exec git fail. error:", err, "dir:", dir)
 			}
 
+			if utils.GlobalConfig.GetBool("debug") {
+				log.Println(value.Value)
+				return
+			}
 			//回应git更新成功,应该为日志
-			//a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-			//pkt := g.NewPkt()
-			//
-			////todo 回应git更新成功
-			////id没有想好
-			//pkt.Id = g.MinePluginsResponse
-			//if err := a.GetCon().Write(pkt); err != nil {
-			//	log.Println(err)
-			//}
-		}
-		wg := sync.WaitGroup{}
-		wg.Add(1)
-		go func() {
-			if err := cmd.Run(); err != nil {
+			//每执行一个操作后,应该将操作的成功或者失败的信息通知中控服务器
+			a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+			pkt := g.NewPkt()
+			pkt.Id = g.ActionNotice
+			pkt.Data, _ = g.EncodeData([]*model.MetricValue{&value})
+			if err := a.GetCon().Write(pkt); err != nil {
 				log.Println(err)
 			}
+		}
+		go func() {
+			cmd.Run()
 			fmt.Println("readList")
-			desiredAll := ListPlugins("")
+			desiredAll := ListPlugins(utils.GlobalConfig.GetString("plugin.dir"))
 			DelNoUsePlugins(desiredAll)
 			AddNewPlugins(desiredAll)
-			wg.Done()
 		}()
-		wg.Wait()
 	}
 
 }

@@ -1,12 +1,16 @@
 {
   "ip": "127.0.0.1",
   "port": 8001,
-  "username": "agent2",
+  "username": "agent1",
   "password": "123456",
-  "heartBeat": "10",
+  "heartBeat": 3,
   "debug": true,
   "plugin": {
     "dir": "/mnt/f/code/agent/plugins",
     "log": "/mnt/f/code/agent/plugins"
+  },
+  "http": {
+    "enabled": true,
+    "listen": ":8002"
   }
 }

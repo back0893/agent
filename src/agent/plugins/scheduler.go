@@ -6,10 +6,10 @@ import (
 	"agent/src/g/model"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/back0893/goTcp/utils"
 	"github.com/toolkits/file"
 	"log"
-	"path/filepath"
 	"time"
 )
 
@@ -59,7 +59,7 @@ func PluginRun(plugin *Plugin) {
 	if plugin.IsRepeat == false {
 		timeout = 0
 	}
-	fpath := filepath.Join(utils.GlobalConfig.GetString("plugin.dir"), plugin.FilePath)
+	fpath := plugin.FilePath
 
 	if !file.IsExist(fpath) {
 		log.Println("no such plugin:", fpath)
@@ -76,63 +76,70 @@ func PluginRun(plugin *Plugin) {
 		Timeout: timeout,
 	}
 	cmd.Callback = func(stdout, stderr bytes.Buffer, err error, isTimeout bool) {
+		var metrics []*model.MetricValue
+
 		errStr := stderr.String()
 		if errStr != "" {
-			logFile := filepath.Join(utils.GlobalConfig.GetString("plugin.log"), plugin.FilePath+".stderr.log")
-			if _, err = file.WriteString(logFile, errStr); err != nil {
-				log.Printf("[ERROR] write log to %s fail, error: %s\n", logFile, err)
+			value := model.MetricValue{
+				Metric:    "exec.fail",
+				Timestamp: time.Now().Unix(),
+				Value:     fmt.Sprintln(file.Basename(plugin.FilePath), " err:", errStr),
 			}
-		}
-
-		if isTimeout {
+			metrics = append(metrics, &value)
+		} else if isTimeout {
 			// has be killed
-			if err == nil && debug {
+			if debug {
 				log.Println("[INFO] timeout and kill process", fpath, "successfully")
 			}
-
-			if err != nil {
-				log.Println("[ERROR] kill process", fpath, "occur error:", err)
+			value := model.MetricValue{
+				Metric:    "exec.fail",
+				Timestamp: time.Now().Unix(),
+				Value:     fmt.Sprintln(file.Basename(plugin.FilePath), " timeout error:", err),
 			}
-
-			return
-		}
-
-		if err != nil {
-			log.Println("[ERROR] exec plugin", fpath, "fail. error:", err)
-			return
-		}
-
-		// exec successfully
-		data := stdout.Bytes()
-		if len(data) == 0 {
-			if debug {
-				log.Println("debug stdout empty")
+			metrics = append(metrics, &value)
+		} else if err != nil {
+			value := model.MetricValue{
+				Metric:    "exec.fail",
+				Timestamp: time.Now().Unix(),
+				Value:     fmt.Sprintln(file.Basename(plugin.FilePath), " error:", err),
 			}
-			return
-		}
-		if debug {
+			metrics = append(metrics, &value)
+		} else {
+			// exec successfully
+			data := stdout.Bytes()
+			if len(data) == 0 {
+				if debug {
+					log.Println("debug stdout empty")
+				}
+				return
+			}
 			log.Println(string(data))
-			return
+			err = json.Unmarshal(data, &metrics)
+			if err != nil {
+				log.Print(err)
+				return
+			}
 		}
-		var metrics []*model.MetricValue
-		err = json.Unmarshal(data, &metrics)
-		if err != nil {
-			log.Print(err)
-			return
-		}
-		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+
+		//if debug{
+		//	for _,metric:=range metrics{
+		//		log.Println(metric.Metric,metric.Value)
+		//	}
+		//	return
+		//}
+
 		pkt := g.NewPkt()
+		pkt.Id = g.ActionNotice
 		if pkt.Data, err = g.EncodeData(metrics); err != nil {
 			log.Print(err)
 			return
 		}
+		a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 		if err := a.GetCon().Write(pkt); err != nil {
 			log.Println(err)
 		}
 	}
 	go func() {
-		if err := cmd.Run(); err != nil {
-			log.Println("[err]", err)
-		}
+		cmd.Run()
 	}()
 }

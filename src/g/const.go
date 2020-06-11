@@ -18,6 +18,7 @@ const (
 	ProcessNumList  = 107 //请求监控进程id
 	MinePlugins     = 108 //请求当前agent配置的插件
 	ServiceResponse = 109
+	ActionNotice    = 110 //插件或者活动的执行后的
 
 	//服务器端回应id
 	Response               = 99  //通用回应

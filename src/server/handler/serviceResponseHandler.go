@@ -51,7 +51,7 @@ func (sr *ServiceResponse) Handler(ctx context.Context, packet *g.Packet, connec
 		fmt.Println(err)
 	} else {
 		//todo 处理成功后通用操作
-		pkt := g.ComResponse()
+		pkt := g.ComResponse(packet.Id)
 		connection.Write(pkt)
 	}
 }

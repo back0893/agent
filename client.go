@@ -2,10 +2,14 @@ package main
 
 import (
 	"agent/src/agent"
+	httpHandler "agent/src/agent/http"
+	"agent/src/agent/iface"
 	"agent/src/g"
+	"agent/src/http"
 	"flag"
 	"fmt"
 	"github.com/back0893/goTcp/utils"
+	"log"
 	"os"
 )
 
@@ -16,7 +20,22 @@ func start(cfg string) {
 	}
 	agentClient.Start()
 	utils.GlobalConfig.Set(g.AGENT, agentClient)
+	go startHttp(agentClient)
 	agentClient.Wait()
+}
+
+func startHttp(agent iface.IAgent) {
+	if !utils.GlobalConfig.GetBool("http.enabled") {
+		return
+	}
+	addr := utils.GlobalConfig.GetString("http.listen")
+	if addr == "" {
+		return
+	}
+	log.Println("http start ,listening", addr)
+	httpServer := http.NewServer(addr)
+	httpServer.AddHandler("/push", httpHandler.WrapperTransfer(agent))
+	log.Fatalln(httpServer.Run())
 }
 
 func main() {

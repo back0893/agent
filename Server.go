@@ -23,24 +23,25 @@ var (
 )
 
 func httpServer(ctx context.Context, server iface.IServer) {
-	host := utils.GlobalConfig.GetString("http.host")
-	port := utils.GlobalConfig.GetInt("http.port")
-	addr := fmt.Sprintf("%s:%d", host, port)
+
+	if !utils.GlobalConfig.GetBool("http.enabled") {
+		return
+	}
+	addr := utils.GlobalConfig.GetString("http.listen")
+	if addr == "" {
+		return
+	}
+
 	log.Printf("启动http服务器:%s", addr)
 	s := http.NewServer(addr)
 
 	s.AddHandler("/sendTask", handler.WrapperSendTask(server))
 	s.AddHandler("/update", handler.WrapperUpdate(server))
 
-	go func() {
-		if err := s.Run(); err != nil {
-			log.Println(err)
-		}
-	}()
-	select {
-	case <-ctx.Done():
-		s.Close(ctx)
+	if err := s.Run(); err != nil {
+		log.Println(err)
 	}
+
 }
 func main() {
 	defer func() {
@@ -67,6 +68,7 @@ func main() {
 	event.AddHandlerMethod(g.MinePlugins, ServiceHandler.NewPluginsHandler())
 	//event.AddHandlerMethod(g.PortListenListResponse, ServiceHandler.NewPing())
 	event.AddHandlerMethod(g.ServiceResponse, ServiceHandler.NewServiceResponse())
+	event.AddHandlerMethod(g.ActionNotice, ServiceHandler.NewActionNotice())
 
 	s.AddEvent(event)
 	s.AddProtocol(&g.Protocol{})
@@ -75,23 +77,25 @@ func main() {
 	port := utils.GlobalConfig.GetInt("Port")
 
 	//启动定时,删除长时间没有心跳的连接
-	go func(server *net.Server) {
-		server.GetConnections().Range(func(key, value interface{}) bool {
+	ht := utils.GlobalConfig.GetInt64("heartTimeOut")
+	src.AddTimer(time.Duration(ht)*time.Second, func() {
+		now := time.Now().Unix()
+		s.GetConnections().Range(func(key, value interface{}) bool {
 			conn := value.(iface.IConnection)
 			if last, ok := conn.GetExtraData("last_ping"); ok {
 				last_ping := last.(int64)
-				if time.Now().Unix()-last_ping >= utils.GlobalConfig.GetInt64("heartTimeOut") {
+				if now-last_ping >= ht {
 					log.Println("delete con")
 					conn.Close()
-					server.DeleteCon(conn)
+					s.DeleteCon(conn)
 				}
 			} else {
 				conn.Close()
-				server.DeleteCon(conn)
+				s.DeleteCon(conn)
 			}
 			return true
 		})
-	}(s)
+	})
 
 	//启动http
 	//http使用tcp连接上来,然后由这个转发给各个agent

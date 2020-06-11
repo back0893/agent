@@ -14,7 +14,7 @@ type Server struct {
 
 func NewServer(addr string) *Server {
 	return &Server{
-		Server: &http.Server{Addr: addr, Handler: nil},
+		Server: &http.Server{Addr: addr, Handler: nil, MaxHeaderBytes: 1 << 30},
 	}
 }
 func (s *Server) Run() error {

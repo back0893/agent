@@ -126,6 +126,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	event.AddHandlerMethod(g.MinePluginsResponse, handler.Plugins{})
 	event.AddHandlerMethod(g.AuthSuccess, handler.AuthSuccess{})
 	event.AddHandlerMethod(g.AuthFail, handler.AuthFail{})
+	event.AddHandlerMethod(g.Response, handler.Response{})
 
 	agent.AddEvent(event)
 	//断线重连
@@ -143,6 +144,9 @@ func NewAgent(cfg string) (*Agent, error) {
 	//认真成功,主动请求,启动的services
 	//初始化服务器的数据收集
 	BuildMappers()
+	//基础信息的自动收集
+	Collect()
+
 	//定时更新cpu的使用情况
 	cron.InitDatHistory()
 
