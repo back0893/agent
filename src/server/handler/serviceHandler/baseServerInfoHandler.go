@@ -27,12 +27,12 @@ func (b BaseServerInfo) Handler(ctx context.Context, service *model.ServiceRespo
 	}
 	tmp, _ := connection.GetExtraData("auth")
 	auth := tmp.(*model.Auth)
-	db, _ := Db.DbConnections.Get("ep")
+	ep, _ := db.DbConnections.Get("ep")
 	ram_usage_ratio := g.Round(float64(mem.Used)/float64(mem.Total), 2)
-	if _, err := db.Exec("insert cc_server_log (server_id,ram,cpu_usage_ratio,ram_usage_ratio,created_at) values (?,?,?,?,?)", auth.Id, float64(mem.Total)/(1024*1024), g.Round(cpu.Busy/100, 2), ram_usage_ratio, g.CSTTime()); err != nil {
+	if _, err := ep.Exec("insert cc_server_log (server_id,ram,cpu_usage_ratio,ram_usage_ratio,created_at) values (?,?,?,?,?)", auth.Id, float64(mem.Total)/(1024*1024), g.Round(cpu.Busy/100, 2), ram_usage_ratio, g.CSTTime()); err != nil {
 		log.Println(err.Error())
 	}
-	if _, err := db.Exec("update cc_server set cpu_usage_ratio=?,ram_usage_ratio=?,cpu_num=?,cpu_mhz=? where id=?", g.Round(cpu.Busy/100, 2), ram_usage_ratio, cpuNum, cpuMhz, auth.Id); err != nil {
+	if _, err := ep.Exec("update cc_server set cpu_usage_ratio=?,ram_usage_ratio=?,cpu_num=?,cpu_mhz=? where id=?", g.Round(cpu.Busy/100, 2), ram_usage_ratio, cpuNum, cpuMhz, auth.Id); err != nil {
 		log.Println(err.Error())
 	}
 	return nil

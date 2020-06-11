@@ -26,19 +26,19 @@ func (AuthHandler) Handler(ctx context.Context, packet *g.Packet, connection ifa
 	}
 
 	log.Printf("agent登录,登录用户:%s\n", auth.Username)
-	db, _ := Db.DbConnections.Get("ep")
+	ep, _ := db.DbConnections.Get("ep")
 	ccServer := serverModel.Server{}
 
 	pkt := g.NewPkt()
 	pkt.Id = g.AuthSuccess
-	if err := db.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
+	if err := ep.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
 		pkt.Id = g.AuthFail
 		connection.AsyncWrite(pkt, 5*time.Second)
 		return
 	}
 	auth.Id = ccServer.Id
 	ccService := []*serverModel.Service{}
-	if err := db.Select(&ccService, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
+	if err := ep.Select(&ccService, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
 		log.Println(err)
 		pkt.Id = g.AuthFail
 		connection.AsyncWrite(pkt, 5*time.Second)

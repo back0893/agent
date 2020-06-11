@@ -23,7 +23,7 @@ func WrapperTransfer(agent iface.IAgent) func(http.ResponseWriter, *http.Request
 		var metrics []*model.MetricValue
 		err := decoder.Decode(&metrics)
 		if err != nil {
-			http.Error(w, "connot decode body", http.StatusBadRequest)
+			http.Error(w, "connot decode body,err:"+err.Error(), http.StatusBadRequest)
 			return
 		}
 		pkt := g.NewPkt()

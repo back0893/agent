@@ -1,4 +1,4 @@
-package Db
+package db
 
 import (
 	"agent/src/g"
