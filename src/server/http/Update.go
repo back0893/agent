@@ -1,4 +1,4 @@
-package handler
+package http
 
 import (
 	"agent/src/g"
@@ -10,9 +10,10 @@ import (
 )
 
 type UpdateInfo struct {
-	Version int    //版本号
-	Url     string //更新地址
-	Agent   string
+	Version string `json:"version"` //版本号
+	Url     string `json:"url"`     //更新地址
+	Agent   string `json:"agent"`
+	Type    int    `json:"type"` //更新的类型 0=>全部 1=>agent 2=>配置
 }
 
 func WrapperUpdate(s iface.IServer) func(http.ResponseWriter, *http.Request) {

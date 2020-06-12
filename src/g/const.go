@@ -28,6 +28,4 @@ const (
 
 	//agent的context传递key
 	AGENT string = "agent"
-	//全局产量,当前agent的版本
-	VERSION = 4
 )

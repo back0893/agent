@@ -4,9 +4,9 @@ import (
 	"agent/src"
 	"agent/src/g"
 	"agent/src/http"
-	"agent/src/http/handler"
 	"agent/src/server"
 	ServiceHandler "agent/src/server/handler"
+	http2 "agent/src/server/http"
 	"context"
 	"flag"
 	"fmt"
@@ -35,8 +35,8 @@ func httpServer(ctx context.Context, server iface.IServer) {
 	log.Printf("启动http服务器:%s", addr)
 	s := http.NewServer(addr)
 
-	s.AddHandler("/sendTask", handler.WrapperSendTask(server))
-	s.AddHandler("/update", handler.WrapperUpdate(server))
+	s.AddHandler("/plugin-update", http2.WrapperPluginUpdate(server))
+	s.AddHandler("/update", http2.WrapperUpdate(server))
 
 	if err := s.Run(); err != nil {
 		log.Println(err)

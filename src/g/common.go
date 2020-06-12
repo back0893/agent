@@ -115,17 +115,17 @@ func Post(url string, data interface{}) ([]byte, error) {
 file 是一个绝对路径
 */
 func Down(url, file string) error {
-	client := http.Client{Timeout: time.Second * 5}
+	client := http.Client{Timeout: time.Minute * 10}
 	resp, err := client.Get(url)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		//如果非200返回,说明是有问题的更新
 		return errors.New("非200下载")
 	}
-	fp, err := os.Create(file)
+	fp, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0777)
 	if err != nil {
 		return err
 	}

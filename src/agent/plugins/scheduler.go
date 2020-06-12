@@ -10,6 +10,7 @@ import (
 	"github.com/back0893/goTcp/utils"
 	"github.com/toolkits/file"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -17,6 +18,7 @@ type PluginScheduler struct {
 	Ticker *time.Ticker
 	Plugin *Plugin
 	Quit   chan struct{}
+	once   sync.Once
 }
 
 func NewPluginScheduler(p *Plugin) *PluginScheduler {
@@ -50,7 +52,9 @@ func (this *PluginScheduler) Schedule() {
 }
 
 func (this *PluginScheduler) Stop() {
-	close(this.Quit)
+	this.once.Do(func() {
+		close(this.Quit)
+	})
 }
 
 func PluginRun(plugin *Plugin) {
@@ -120,14 +124,6 @@ func PluginRun(plugin *Plugin) {
 				return
 			}
 		}
-
-		//if debug{
-		//	for _,metric:=range metrics{
-		//		log.Println(metric.Metric,metric.Value)
-		//	}
-		//	return
-		//}
-
 		pkt := g.NewPkt()
 		pkt.Id = g.ActionNotice
 		if pkt.Data, err = g.EncodeData(metrics); err != nil {

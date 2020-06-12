@@ -52,7 +52,12 @@ func ListPlugins(dir string) map[string]*Plugin {
 
 		fpath := filepath.Join(dir, filename)
 		//如果间隔时间为0,意味只执行一次的插件
-		plugin := &Plugin{FilePath: fpath, Interval: interval, IsRepeat: true}
+		plugin := &Plugin{
+			FilePath: fpath,
+			Interval: interval,
+			IsRepeat: true,
+			MTime:    f.ModTime().Unix(),
+		}
 		if interval == 0 {
 			plugin.IsRepeat = false
 		}

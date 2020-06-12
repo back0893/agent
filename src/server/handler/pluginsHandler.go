@@ -18,7 +18,7 @@ type PluginsHandler struct{}
 func (PluginsHandler) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
 	pkt := g.NewPkt()
 	plugin := model.Plugins{
-		Uri: []string{"https://github.com/m-zajac/json2go.git"},
+		Uri: []string{"https://code.shomes.cn/lgj/plugins.git"},
 	}
 	var err error
 	if pkt.Data, err = g.EncodeData(plugin); err != nil {

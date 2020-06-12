@@ -1,12 +1,25 @@
 package agent
 
 import (
+	"agent/src/agent/iface"
 	"agent/src/g"
-	model2 "agent/src/g/model"
-	"errors"
+	"agent/src/g/model"
+	"context"
 	"fmt"
+	"github.com/back0893/goTcp/utils"
+	"log"
 	"os"
+	"time"
 )
+
+var updateChan chan *model.UpdateInfo
+
+func init() {
+	updateChan = make(chan *model.UpdateInfo)
+}
+func GetUpdateChan() chan *model.UpdateInfo {
+	return updateChan
+}
 
 /**
 更新,需要有撤销动作当执行失败时..
@@ -32,16 +45,11 @@ func NewUpdate(filename string) *UpdateCommand {
 		filename: filename,
 	}
 }
-
-func (uc *UpdateCommand) Do(Info *model2.UpdateInfo) error {
-	//版本小于当前的版本号
-	if Info.Version <= g.VERSION {
-		return errors.New("不能回退版本")
-	}
+func (uc *UpdateCommand) Do(url string) error {
 	newFile := uc.GetNewFilename()
 	currentFile := uc.GetFilename()
 	oldFile := uc.GetOldIFilename()
-	if err := g.Down(Info.Url, newFile); err != nil {
+	if err := g.Down(url, newFile); err != nil {
 		uc.Undo()
 		return err
 	}
@@ -53,6 +61,9 @@ func (uc *UpdateCommand) Do(Info *model2.UpdateInfo) error {
 		uc.Undo()
 		return err
 	}
+
+	//agent退出
+
 	return nil
 }
 func (uc *UpdateCommand) Undo() {
@@ -61,5 +72,64 @@ func (uc *UpdateCommand) Undo() {
 	oldFile := uc.GetOldIFilename()
 	_ = os.Rename(currentFile, newFile)
 	_ = os.Rename(oldFile, currentFile)
+	_ = os.Remove(newFile)
 	//如果回退失败应该直接退出,并记录日志?
+}
+
+func AgentSelfUpdate(ctx context.Context) {
+	for {
+		select {
+		case info := <-updateChan:
+			Upgrade(info)
+		case <-ctx.Done():
+			break
+		}
+	}
+}
+func Upgrade(info *model.UpdateInfo) {
+	binUrl := fmt.Sprintf("%s/%s_bin", info.Url, info.Version)
+	cfgUrl := fmt.Sprintf("%s/%s_config", info.Url, info.Version)
+	agentPath := fmt.Sprintf("%s/agent", utils.GlobalConfig.GetString("root"))
+	cfgPath := utils.GlobalConfig.GetString("cfgpath")
+	log.Println(cfgPath, cfgUrl)
+	success := false
+	switch info.Type {
+	case 0:
+		binUpdate := NewUpdate(agentPath)
+		cfgUpdate := NewUpdate(cfgPath)
+		binerr := binUpdate.Do(binUrl)
+		cfgerr := cfgUpdate.Do(cfgUrl)
+		if binerr == nil && cfgerr == nil {
+			success = true
+		}
+	case 1:
+		binUpdate := NewUpdate(agentPath)
+		if err := binUpdate.Do(binUrl); err == nil {
+			success = true
+		}
+
+	case 2:
+		cfgUpdate := NewUpdate(cfgPath)
+		if err := cfgUpdate.Do(cfgUrl); err == nil {
+			success = true
+		} else {
+			log.Println(err)
+		}
+	}
+	//通知中控升级成功或者失败
+	agent := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
+	pkt := g.NewPkt()
+	if success {
+		pkt.Id = 100861
+	} else {
+		pkt.Id = 100862
+	}
+	agent.GetCon().AsyncWrite(pkt, 5)
+	//等待1s
+	//自杀,等待重启
+	time.Sleep(time.Second)
+	if success {
+		agent.Stop()
+	}
+
 }

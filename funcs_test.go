@@ -2,6 +2,7 @@ package main
 
 import (
 	"agent/src/agent/funcs"
+	"agent/src/g"
 	"testing"
 )
 
@@ -14,7 +15,7 @@ func TestCpu(t *testing.T) {
 func TestDisk(t *testing.T) {
 	disk, _ := funcs.DiskUseMetrics()
 	for _, ms := range disk {
-		t.Logf("%s has %d free %d,use %d", ms.FsFile, ms.Total, ms.Free, ms.Used)
+		t.Logf("%s has %d free %d,use %d,percent %f", ms.FsFile, ms.Total, ms.Free, ms.Used, g.Round(ms.Percent, 2))
 	}
 }
 func TestMem(t *testing.T) {

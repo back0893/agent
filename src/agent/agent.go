@@ -117,8 +117,12 @@ func NewAgent(cfg string) (*Agent, error) {
 		wg:       &sync.WaitGroup{},
 		cfg:      cfg,
 	}
+	ctx := context.WithValue(context.WithValue(context.Background(), g.AGENT, agent), "upgradeChan", GetUpdateChan())
 
-	agent.ctx, agent.ctxCancel = context.WithCancel(context.WithValue(context.Background(), g.AGENT, agent))
+	//等待通知更新
+	go AgentSelfUpdate(ctx)
+
+	agent.ctx, agent.ctxCancel = context.WithCancel(ctx)
 	agent.AddProtocol(g.Protocol{})
 	event := NewEvent()
 
@@ -127,6 +131,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	event.AddHandlerMethod(g.AuthSuccess, handler.AuthSuccess{})
 	event.AddHandlerMethod(g.AuthFail, handler.AuthFail{})
 	event.AddHandlerMethod(g.Response, handler.Response{})
+	event.AddHandlerMethod(g.UPDATE, handler.Update{})
 
 	agent.AddEvent(event)
 	//断线重连

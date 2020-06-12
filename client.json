@@ -6,8 +6,8 @@
   "heartBeat": 3,
   "debug": true,
   "plugin": {
-    "dir": "/mnt/f/code/agent/plugins",
-    "log": "/mnt/f/code/agent/plugins"
+    "dir": "/home/liu/agent/plugins",
+    "log": "/home/liu/agent/plugins"
   },
   "http": {
     "enabled": true,

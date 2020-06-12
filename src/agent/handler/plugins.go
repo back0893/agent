@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"agent/src/agent/plugins"
 	"agent/src/g"
 	"agent/src/g/model"
 	"context"
 	"github.com/back0893/goTcp/iface"
+	"github.com/back0893/goTcp/utils"
 	"log"
 )
 
@@ -20,5 +22,5 @@ func (p Plugins) Handler(ctx context.Context, packet *g.Packet, connection iface
 
 	//因为git的拉取操作为一个耗时任务,
 	//防止其他处理者被阻塞
-	//plugins.Git(utils.GlobalConfig.GetString("plugin.dir"), &repPlugins)
+	plugins.Git(utils.GlobalConfig.GetString("plugin.dir"), &repPlugins)
 }

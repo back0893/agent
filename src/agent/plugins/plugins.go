@@ -19,6 +19,7 @@ type Plugin struct {
 	FilePath string
 	Interval int
 	IsRepeat bool
+	MTime    int64
 }
 
 var (
@@ -27,8 +28,8 @@ var (
 )
 
 func DelNoUsePlugins(newPlugins map[string]*Plugin) {
-	for currKey := range Plugins {
-		if _, ok := newPlugins[currKey]; !ok {
+	for currKey, currPlugin := range Plugins {
+		if newPlugin, ok := newPlugins[currKey]; !ok || currPlugin.MTime != newPlugin.MTime {
 			deletePlugin(currKey)
 		}
 	}
@@ -36,8 +37,13 @@ func DelNoUsePlugins(newPlugins map[string]*Plugin) {
 
 func AddNewPlugins(newPlugins map[string]*Plugin) {
 	for fpath, newPlugin := range newPlugins {
-		if _, ok := Plugins[fpath]; ok {
-			continue
+		if currPlugin, ok := Plugins[fpath]; ok {
+			//存在但是插件被修改过,也需要停止后重启
+			if newPlugin.MTime != currPlugin.MTime {
+				deletePlugin(fpath)
+			} else {
+				continue
+			}
 		}
 
 		Plugins[fpath] = newPlugin
@@ -96,22 +102,16 @@ func Git(dir string, repPlugins *model.Plugins) {
 				Timestamp: time.Now().Unix(),
 				Value:     stdout.String(),
 			}
-			errStr := stderr.String()
-			if errStr != "" {
-				value.Value = fmt.Sprintln("[ERROR] git update fail error:", errStr)
-			}
-
 			if isTimeout {
 				value.Value = fmt.Sprintln("[ERROR] git timeout error:", err)
 			}
-
 			if err != nil {
-				value.Value = fmt.Sprintln("[ERROR] exec git fail. error:", err, "dir:", dir)
-			}
-
-			if utils.GlobalConfig.GetBool("debug") {
-				log.Println(value.Value)
-				return
+				//如果异常退出,错误输出才有用,,
+				//因为其他命令也可能使用错误输出
+				errStr := stderr.String()
+				if errStr != "" {
+					value.Value = fmt.Sprintln("[ERROR] git update fail error:", errStr)
+				}
 			}
 			//回应git更新成功,应该为日志
 			//每执行一个操作后,应该将操作的成功或者失败的信息通知中控服务器
