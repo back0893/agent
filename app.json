@@ -16,5 +16,10 @@
     "params": {
       "charset": "utf8"
     }
+  },
+  "work": {
+    "start": true,
+    "size": 10,
+    "buffer": 100
   }
 }
