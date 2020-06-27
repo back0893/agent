@@ -29,15 +29,3 @@ func (PluginsHandler) Handler(ctx context.Context, packet *g.Packet, connection 
 	pkt.Id = g.MinePluginsResponse
 	connection.Write(pkt)
 }
-
-type PluginsResponseHandler struct{}
-
-func (PluginsResponseHandler) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
-	metrics := make([]*model.MetricValue, 0)
-	if err := g.DecodeData(packet.Data, &metrics); err != nil {
-		log.Println("解析 plugins fail,response data:", string(packet.Data))
-	}
-	for _, metric := range metrics {
-		log.Println(metric.Value)
-	}
-}

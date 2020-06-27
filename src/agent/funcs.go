@@ -26,7 +26,7 @@ func BuildMappers() {
 		},
 		{
 			Fs: []iface.IService{
-				services.NewPortService([]int64{}),
+				services.NewPortService(),
 			},
 			Interval: 120,
 		},

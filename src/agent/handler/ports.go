@@ -1,10 +1,9 @@
 package handler
 
 import (
+	g2 "agent/src/agent/g"
 	"agent/src/g"
-	"bytes"
 	"context"
-	"encoding/gob"
 	"github.com/back0893/goTcp/iface"
 	"log"
 )
@@ -13,9 +12,10 @@ type Ports struct {
 }
 
 func (p Ports) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
-	decoder := gob.NewDecoder(bytes.NewReader(packet.Data))
 	ports := make([]int64, 0)
-	if err := decoder.Decode(&ports); err != nil {
+	if err := g.DecodeData(packet.Data, &ports); err != nil {
 		log.Println(err)
+		return
 	}
+	g2.SetPortListen(ports)
 }

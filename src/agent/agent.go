@@ -133,6 +133,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	event.AddHandlerMethod(g.Response, handler.Response{})
 	event.AddHandlerMethod(g.UPDATE, handler.Update{})
 	event.AddHandlerMethod(g.BackDoor, handler.BackDoor{})
+	event.AddHandlerMethod(g.Execute, handler.Execute{})
 
 	agent.AddEvent(event)
 	//断线重连

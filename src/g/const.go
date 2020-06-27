@@ -7,7 +7,7 @@ const (
 	STOP         = 4  //停止
 	UPDATE       = 5  //更新
 
-	//客户端请求id
+	//客户端
 	Services         = 6
 	PING             = 3   //心跳
 	Auth             = 100 //身份识别
@@ -20,7 +20,9 @@ const (
 	ServiceResponse  = 109
 	ActionNotice     = 110 //插件或者活动的执行后的
 	BackDoorResponse = 308
-	//服务器端回应id
+	Execute          = 111 //执行文件
+
+	//服务端
 	Response               = 99  //通用回应
 	PortListenListResponse = 306 //需要监控的port
 	ProcessNumListResponse = 307 //需要监控进程id

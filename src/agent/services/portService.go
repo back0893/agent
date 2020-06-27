@@ -2,6 +2,7 @@ package services
 
 import (
 	"agent/src/agent/funcs"
+	g2 "agent/src/agent/g"
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"agent/src/g/model"
@@ -10,21 +11,15 @@ import (
 )
 
 type PortService struct {
-	Ports []int64
 }
 
-func NewPortService(port []int64) *PortService {
-	s := &PortService{
-		Ports: port,
-	}
-	return s
+func NewPortService() *PortService {
+	return &PortService{}
 }
-func (m *PortService) SetPorts(ports []int64) {
-	m.Ports = ports
-}
+
 func (m PortService) Info() {
 	info := model.NewServiceResponse(g.PortListen, 1)
-	portListen := m.Ports
+	portListen := g2.GetPortListen()
 	if len(portListen) == 0 {
 		return
 	}

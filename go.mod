@@ -3,7 +3,7 @@ module agent
 go 1.13
 
 require (
-	github.com/back0893/goTcp v0.0.10
+	github.com/back0893/goTcp v0.0.11-0.20200627075729-5a781b6b4ad6
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/pkg/errors v0.9.1
