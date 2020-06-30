@@ -6,7 +6,7 @@
   "heartBeat": 3,
   "debug": true,
   "plugin": {
-    "dir": "/home/liu/agent/plugins",
+    "dir": "/home/liu/agent/plugins"
   },
   "http": {
     "enabled": true,

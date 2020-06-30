@@ -107,6 +107,8 @@ func (a *Agent) ReCon(ctx context.Context, con iface.IConnection) {
 }
 
 func NewAgent(cfg string) (*Agent, error) {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+
 	con, err := ConnectServer(cfg)
 	if err != nil {
 		return nil, err

@@ -47,7 +47,6 @@ func main() {
 	root, _ := filepath.Abs(".")
 	utils.GlobalConfig.Set("root", root)
 	utils.GlobalConfig.Set("cfgpath", cfg)
-
 	switch action {
 	case "start":
 		start(cfg)

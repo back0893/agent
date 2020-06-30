@@ -75,6 +75,7 @@ func main() {
 
 	s.AddEvent(event)
 	s.AddProtocol(&g.Protocol{})
+	net.StartWorkPool()
 
 	ip := utils.GlobalConfig.GetString("Ip")
 	port := utils.GlobalConfig.GetInt("Port")
