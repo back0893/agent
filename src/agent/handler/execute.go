@@ -5,11 +5,13 @@ import (
 	"agent/src/g"
 	"agent/src/g/model"
 	"context"
-	"github.com/back0893/goTcp/iface"
-	"github.com/back0893/goTcp/utils"
 	"log"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/back0893/goTcp/iface"
+	"github.com/back0893/goTcp/utils"
 )
 
 type Execute struct {
@@ -34,4 +36,6 @@ func (e Execute) Handler(ctx context.Context, packet *g.Packet, connection iface
 		MTime:    0,
 	}
 	plugins.PluginRun(plugin)
+	pkt := g.ComResponse(packet.Id)
+	connection.AsyncWrite(pkt, 5*time.Second)
 }

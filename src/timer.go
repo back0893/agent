@@ -6,6 +6,8 @@ import (
 	"log"
 	"sync"
 	"time"
+
+	"github.com/back0893/goTcp/net"
 )
 
 /**
@@ -215,8 +217,13 @@ func (wheel *TimingWheel) Start() {
 			for _, timerType := range timers {
 				//这里如果使用一个工作次,避免堵塞
 				//调度,如果使用workPool可能出现延迟执行的情况
-				//但是如果不使用,如果定时器过多,必然会导性能问题..
-				go timerType.timeout()
+				//定时任务放到工作池中,如果工作池么有启动
+				//使用携程
+				if net.Pool != nil {
+					net.Pool.Add(timerType.timeout)
+				} else {
+					go timerType.timeout()
+				}
 			}
 			wheel.Update(timers)
 		}

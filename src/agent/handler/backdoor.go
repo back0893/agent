@@ -4,9 +4,10 @@ import (
 	"agent/src/g"
 	"bytes"
 	"context"
-	"github.com/back0893/goTcp/iface"
 	"log"
 	"time"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 type BackDoor struct {
@@ -26,7 +27,7 @@ func (b BackDoor) Handler(ctx context.Context, packet *g.Packet, connection ifac
 		Timeout: 5 * 1000,
 		Callback: func(stdout, stderr bytes.Buffer, err error, isTimeout bool) {
 			pkt := g.NewPkt()
-			pkt.Id = g.BackDoorResponse
+			pkt.Id = g.BackDoor
 			stderrStr := stderr.String()
 			stdoutStr := stdout.String()
 			if err != nil {
@@ -42,4 +43,6 @@ func (b BackDoor) Handler(ctx context.Context, packet *g.Packet, connection ifac
 		},
 	}
 	go cmd.Run()
+	pkt := g.ComResponse(packet.Id)
+	connection.AsyncWrite(pkt, 5*time.Second)
 }

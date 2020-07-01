@@ -5,8 +5,9 @@ import (
 	"agent/src/g/model"
 	"context"
 	"fmt"
-	"github.com/back0893/goTcp/iface"
 	"log"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 func NewPluginsHandler() *PluginsHandler {
@@ -26,6 +27,6 @@ func (PluginsHandler) Handler(ctx context.Context, packet *g.Packet, connection 
 		return
 	}
 	fmt.Println(len(pkt.Data))
-	pkt.Id = g.MinePluginsResponse
+	pkt.Id = g.MinePlugins
 	connection.Write(pkt)
 }

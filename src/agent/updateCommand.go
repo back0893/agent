@@ -6,10 +6,11 @@ import (
 	"agent/src/g/model"
 	"context"
 	"fmt"
-	"github.com/back0893/goTcp/utils"
 	"log"
 	"os"
 	"time"
+
+	"github.com/back0893/goTcp/utils"
 )
 
 var updateChan chan *model.UpdateInfo
@@ -87,43 +88,35 @@ func AgentSelfUpdate(ctx context.Context) {
 	}
 }
 func Upgrade(info *model.UpdateInfo) {
-	binUrl := fmt.Sprintf("%s/%s_bin", info.Url, info.Version)
-	cfgUrl := fmt.Sprintf("%s/%s_config", info.Url, info.Version)
 	agentPath := fmt.Sprintf("%s/agent", utils.GlobalConfig.GetString("root"))
 	cfgPath := utils.GlobalConfig.GetString("cfgpath")
-	log.Println(cfgPath, cfgUrl)
+	log.Println(info.URL)
 	success := false
+	var err error
 	switch info.Type {
-	case 0:
-		binUpdate := NewUpdate(agentPath)
-		cfgUpdate := NewUpdate(cfgPath)
-		binerr := binUpdate.Do(binUrl)
-		cfgerr := cfgUpdate.Do(cfgUrl)
-		if binerr == nil && cfgerr == nil {
-			success = true
-		}
 	case 1:
 		binUpdate := NewUpdate(agentPath)
-		if err := binUpdate.Do(binUrl); err == nil {
+		if err = binUpdate.Do(info.URL); err == nil {
 			success = true
 		}
 
 	case 2:
 		cfgUpdate := NewUpdate(cfgPath)
-		if err := cfgUpdate.Do(cfgUrl); err == nil {
+		if err = cfgUpdate.Do(info.URL); err == nil {
 			success = true
-		} else {
-			log.Println(err)
 		}
 	}
 	//通知中控升级成功或者失败
 	agent := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 	pkt := g.NewPkt()
+	pkt.Id = g.UPDATE
+	data := model.UpdateResponse{}
 	if success {
-		pkt.Id = 100861
+		data.Status = true
 	} else {
-		pkt.Id = 100862
+		data.Message = err.Error()
 	}
+	pkt.Data, _ = g.EncodeData(data)
 	agent.GetCon().AsyncWrite(pkt, 5)
 	//等待1s
 	//自杀,等待重启

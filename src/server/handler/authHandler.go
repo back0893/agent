@@ -6,9 +6,10 @@ import (
 	"agent/src/server/db"
 	serverModel "agent/src/server/model"
 	"context"
-	"github.com/back0893/goTcp/iface"
 	"log"
 	"time"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 func NewAuthHandler() *AuthHandler {
@@ -30,26 +31,18 @@ func (AuthHandler) Handler(ctx context.Context, packet *g.Packet, connection ifa
 	ccServer := serverModel.Server{}
 
 	pkt := g.NewPkt()
-	pkt.Id = g.AuthSuccess
+	pkt.Id = g.Auth
+	data := model.AuthResponse{}
 	if err := ep.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
-		pkt.Id = g.AuthFail
 		connection.AsyncWrite(pkt, 5*time.Second)
+		pkt.Data, _ = g.EncodeData(data)
 		return
 	}
 	auth.Id = ccServer.Id
-	ccService := []*serverModel.Service{}
-	if err := ep.Select(&ccService, "select service_template_id as template_id,status from cc_server_service where server_id=?", ccServer.Id); err != nil {
-		log.Println(err)
-		pkt.Id = g.AuthFail
-		connection.AsyncWrite(pkt, 5*time.Second)
-		return
-	}
+
+	data.Status = true
+	pkt.Data, _ = g.EncodeData(data)
 	connection.AsyncWrite(pkt, 5*time.Second)
 
 	connection.SetExtraData("auth", &auth)
-
-	service := make(map[int]int)
-	for _, s := range ccService {
-		service[s.TemplateId] = s.Status
-	}
 }

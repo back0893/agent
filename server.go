@@ -10,12 +10,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
 	"github.com/pkg/errors"
-	"log"
-	"time"
 )
 
 var (
@@ -31,14 +32,12 @@ func httpServer(ctx context.Context, server iface.IServer) {
 	if addr == "" {
 		return
 	}
+	ctx = context.WithValue(ctx, g.SERVER, server)
 
 	log.Printf("启动http服务器:%s", addr)
-	s := http.NewServer(addr)
+	s := http.NewServer(ctx, addr)
 
-	s.AddHandler("/plugin-update", http2.WrapperPluginUpdate(server))
-	s.AddHandler("/update", http2.WrapperUpdate(server))
-	s.AddHandler("/backDoor", http2.WrapperRun(server))
-	s.AddHandler("/execute", http2.WrapperExecute(server))
+	s.AddHandler("/action", http2.Handler)
 
 	if err := s.Run(); err != nil {
 		log.Println(err)
@@ -67,14 +66,15 @@ func main() {
 	*/
 	event.AddHandlerMethod(g.Auth, ServiceHandler.NewAuthHandler())
 	event.AddHandlerMethod(g.PING, ServiceHandler.NewPing())
-	event.AddHandlerMethod(g.MinePlugins, ServiceHandler.NewPluginsHandler())
-	event.AddHandlerMethod(g.PortListenList, ServiceHandler.NewPortListenHandler())
-	event.AddHandlerMethod(g.ServiceResponse, ServiceHandler.NewServiceResponse())
+	// event.AddHandlerMethod(g.MinePlugins, ServiceHandler.NewPluginsHandler())
+	// event.AddHandlerMethod(g.PortListenList, ServiceHandler.NewPortListenHandler())
+	event.AddHandlerMethod(g.Service, ServiceHandler.NewServiceResponse())
 	event.AddHandlerMethod(g.ActionNotice, ServiceHandler.NewActionNotice())
-	event.AddHandlerMethod(g.BackDoorResponse, ServiceHandler.NewBackDoorHandler())
+	event.AddHandlerMethod(g.BackDoor, ServiceHandler.NewBackDoorHandler())
 
 	s.AddEvent(event)
 	s.AddProtocol(&g.Protocol{})
+	//启动工作池
 	net.StartWorkPool()
 
 	ip := utils.GlobalConfig.GetString("Ip")
@@ -87,8 +87,8 @@ func main() {
 		s.GetConnections().Range(func(key, value interface{}) bool {
 			conn := value.(iface.IConnection)
 			if last, ok := conn.GetExtraData("last_ping"); ok {
-				last_ping := last.(int64)
-				if now-last_ping >= ht {
+				lastPing := last.(int64)
+				if now-lastPing >= ht {
 					log.Println("delete con")
 					conn.Close()
 					s.DeleteCon(conn)

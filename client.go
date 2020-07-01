@@ -6,10 +6,12 @@ import (
 	"agent/src/agent/iface"
 	"agent/src/g"
 	"agent/src/http"
+	"context"
 	"flag"
-	"github.com/back0893/goTcp/utils"
 	"log"
 	"path/filepath"
+
+	"github.com/back0893/goTcp/utils"
 )
 
 func start(cfg string) {
@@ -19,11 +21,11 @@ func start(cfg string) {
 	}
 	agentClient.Start()
 	utils.GlobalConfig.Set(g.AGENT, agentClient)
-	go startHttp(agentClient)
+	go startHttp(agentClient.GetContext(), agentClient)
 	agentClient.Wait()
 }
 
-func startHttp(agent iface.IAgent) {
+func startHttp(ctx context.Context, agent iface.IAgent) {
 	if !utils.GlobalConfig.GetBool("http.enabled") {
 		return
 	}
@@ -32,8 +34,9 @@ func startHttp(agent iface.IAgent) {
 		return
 	}
 	log.Println("http start ,listening", addr)
-	httpServer := http.NewServer(addr)
-	httpServer.AddHandler("/push", httpHandler.WrapperTransfer(agent))
+	ctx = context.WithValue(ctx, g.SERVER, agent)
+	httpServer := http.NewServer(ctx, addr)
+	httpServer.AddHandler("/push", httpHandler.Hanlder)
 	log.Fatalln(httpServer.Run())
 }
 

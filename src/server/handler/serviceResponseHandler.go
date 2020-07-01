@@ -7,8 +7,9 @@ import (
 	serverFace "agent/src/server/iface"
 	"context"
 	"fmt"
-	"github.com/back0893/goTcp/iface"
 	"log"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 type ServiceResponse struct {
@@ -36,7 +37,7 @@ func (sr *ServiceResponse) GetMethod(id int) serverFace.ServiceMethod {
 }
 
 func (sr *ServiceResponse) Handler(ctx context.Context, packet *g.Packet, connection iface.IConnection) {
-	service := &model.ServiceResponse{}
+	service := &model.Service{}
 	if err := g.DecodeData(packet.Data, service); err != nil {
 		log.Println(err)
 	}

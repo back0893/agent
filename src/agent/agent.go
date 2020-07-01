@@ -8,15 +8,16 @@ import (
 	"agent/src/g"
 	"context"
 	"fmt"
-	"github.com/back0893/goTcp/iface"
-	"github.com/back0893/goTcp/net"
-	"github.com/back0893/goTcp/utils"
 	"log"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/back0893/goTcp/iface"
+	"github.com/back0893/goTcp/net"
+	"github.com/back0893/goTcp/utils"
 )
 
 type Agent struct {
@@ -128,10 +129,9 @@ func NewAgent(cfg string) (*Agent, error) {
 	agent.AddProtocol(g.Protocol{})
 	event := NewEvent()
 
-	event.AddHandlerMethod(g.PortListenListResponse, handler.Ports{})
-	event.AddHandlerMethod(g.MinePluginsResponse, handler.Plugins{})
-	event.AddHandlerMethod(g.AuthSuccess, handler.AuthSuccess{})
-	event.AddHandlerMethod(g.AuthFail, handler.AuthFail{})
+	event.AddHandlerMethod(g.PortListenList, handler.Ports{})
+	event.AddHandlerMethod(g.MinePlugins, handler.Plugins{})
+	event.AddHandlerMethod(g.Auth, handler.AuthSuccess{})
 	event.AddHandlerMethod(g.Response, handler.Response{})
 	event.AddHandlerMethod(g.UPDATE, handler.Update{})
 	event.AddHandlerMethod(g.BackDoor, handler.BackDoor{})

@@ -4,8 +4,9 @@ import (
 	"agent/src/g/model"
 	"bytes"
 	"encoding/binary"
-	"github.com/back0893/goTcp/iface"
 	"time"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 type Packet struct {
@@ -60,17 +61,8 @@ func (pkt *Packet) Serialize() ([]byte, error) {
 func ComResponse(id int32) iface.IPacket {
 	pkt := NewPkt()
 	pkt.Id = Response
-	pkt.Data, _ = EncodeData(model.Response{Id: id})
-	return pkt
-}
-
-/**
-服务动作
-*/
-func ServicePkt(data interface{}) iface.IPacket {
-	pkt := NewPkt()
-	pkt.Id = 0
-	pkt.Data, _ = EncodeData(data)
+	com := model.Common{ID: id}
+	pkt.Data, _ = EncodeData(com)
 	return pkt
 }
 
@@ -79,7 +71,7 @@ func ServicePkt(data interface{}) iface.IPacket {
 */
 func ServiceResponsePkt(data interface{}) iface.IPacket {
 	pkt := NewPkt()
-	pkt.Id = ServiceResponse
+	pkt.Id = Service
 	pkt.Data, _ = EncodeData(data)
 	return pkt
 }

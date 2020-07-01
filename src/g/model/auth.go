@@ -6,8 +6,8 @@ type Auth struct {
 	Id       int
 }
 
-//通常回应结构体
-
-type Response struct {
-	Id int32
+//AuthResponse 认真回应
+type AuthResponse struct {
+	//是否成功
+	Status bool
 }

@@ -5,8 +5,9 @@ import (
 	"agent/src/g/model"
 	"agent/src/server/db"
 	"context"
-	"github.com/back0893/goTcp/iface"
 	"log"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 type BaseServerInfo struct {
@@ -15,7 +16,7 @@ type BaseServerInfo struct {
 func NewBaseServerInfo() *BaseServerInfo {
 	return &BaseServerInfo{}
 }
-func (b BaseServerInfo) Handler(ctx context.Context, service *model.ServiceResponse, connection iface.IConnection) error {
+func (b BaseServerInfo) Handler(ctx context.Context, service *model.Service, connection iface.IConnection) error {
 	var cpu model.Cpu
 	var mem model.Memory
 	loadAvgs := make([]*model.LoadAvg, 0)

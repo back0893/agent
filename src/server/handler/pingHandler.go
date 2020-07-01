@@ -3,8 +3,9 @@ package handler
 import (
 	"agent/src/g"
 	"context"
-	"github.com/back0893/goTcp/iface"
 	"time"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 func NewPing() *Ping {
