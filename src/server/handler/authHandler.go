@@ -33,7 +33,7 @@ func (AuthHandler) Handler(ctx context.Context, packet *g.Packet, connection ifa
 	pkt := g.NewPkt()
 	pkt.Id = g.Auth
 	data := model.AuthResponse{}
-	if err := ep.Get(&ccServer, "select id,name from cc_server where name=?", auth.Username); err != nil {
+	if err := ep.Get(&ccServer, "select id,name from cc_server where id=?", auth.Username); err != nil {
 		connection.AsyncWrite(pkt, 5*time.Second)
 		pkt.Data, _ = g.EncodeData(data)
 		return

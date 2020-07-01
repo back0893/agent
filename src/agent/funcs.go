@@ -4,8 +4,9 @@ import (
 	"agent/src"
 	"agent/src/agent/iface"
 	"agent/src/agent/services"
-	"github.com/back0893/goTcp/utils"
 	"time"
+
+	"github.com/back0893/goTcp/utils"
 )
 
 type FuncsAndInterval struct {
@@ -28,7 +29,7 @@ func BuildMappers() {
 			Fs: []iface.IService{
 				services.NewPortService(),
 			},
-			Interval: 120,
+			Interval: 30,
 		},
 		{
 			Fs: []iface.IService{
