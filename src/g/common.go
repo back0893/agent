@@ -7,15 +7,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/back0893/goTcp/iface"
 	"io"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
 	"time"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 func Mkdir(path string) error {
@@ -161,4 +163,25 @@ func CSTTime() time.Time {
 func Round(f float64, n int) float64 {
 	n10 := math.Pow10(n)
 	return math.Trunc((f+0.5/n10)*n10) / n10
+}
+
+func UniqueInt64(nums []int64) []int64 {
+	unique := make([]int64, 0)
+	for _, num := range nums {
+		if FindInInt64(unique, num) == -1 {
+			unique = append(unique, num)
+		}
+	}
+	log.Println(unique)
+	return unique
+}
+
+//FindInInt64 寻找num在nums中 不存在-1
+func FindInInt64(nums []int64, num int64) int {
+	for i := 0; i < len(nums); i++ {
+		if nums[i] == num {
+			return i
+		}
+	}
+	return -1
 }

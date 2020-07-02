@@ -2,9 +2,10 @@ package g
 
 import (
 	"context"
-	"github.com/back0893/goTcp/iface"
 	"log"
 	"sync"
+
+	"github.com/back0893/goTcp/iface"
 )
 
 type DefaultMethod struct {

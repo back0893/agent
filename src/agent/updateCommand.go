@@ -110,7 +110,7 @@ func Upgrade(info *model.UpdateInfo) {
 	agent := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
 	pkt := g.NewPkt()
 	pkt.Id = g.UPDATE
-	data := model.UpdateResponse{}
+	data := model.UpdateResponse{LogID: info.LogID}
 	if success {
 		data.Status = true
 	} else {
@@ -123,6 +123,8 @@ func Upgrade(info *model.UpdateInfo) {
 	time.Sleep(time.Second)
 	if success {
 		agent.Stop()
+	} else {
+		log.Println(err.Error())
 	}
 
 }

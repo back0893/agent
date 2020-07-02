@@ -6,6 +6,7 @@ import (
 	"agent/src/g/model"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -58,37 +59,30 @@ func (this *PluginScheduler) Stop() {
 	})
 }
 
+//PluginRun 插件的定时执行
 func PluginRun(plugin *Plugin) {
-
 	timeout := plugin.Interval*1000 - 500
 	if plugin.IsRepeat == false {
 		timeout = 0
 	}
 	fpath := plugin.FilePath
-
-	if !file.IsExist(fpath) {
-		log.Println("no such plugin:", fpath)
-		return
-	}
-
-	debug := utils.GlobalConfig.GetBool("debug")
-	if debug {
-		log.Println(fpath, "running...")
-	}
 	cmd := g.Command{
 		Name:    fpath,
 		Args:    []string{},
 		Timeout: timeout,
 	}
-	cmd.Callback = func(stdout, stderr bytes.Buffer, err error, isTimeout bool) {
+	debug := utils.GlobalConfig.GetBool("debug")
+	if debug {
+		log.Println(fpath, "running...")
+	}
+	cmd.Callback = func(stdout, stderr *bytes.Buffer, err error, isTimeout bool) {
 		var metrics []*model.MetricValue
 
-		errStr := stderr.String()
-		if errStr != "" {
+		if stderr != nil && stderr.String() != "" {
 			value := model.MetricValue{
-				Metric:    "exec.fail",
+				Metric:    "plugin.fail",
 				Timestamp: time.Now().Unix(),
-				Value:     fmt.Sprintln(file.Basename(plugin.FilePath), " err:", errStr),
+				Value:     fmt.Sprintln(file.Basename(plugin.FilePath), " err:", stderr.String()),
 			}
 			metrics = append(metrics, &value)
 		} else if isTimeout {
@@ -97,32 +91,44 @@ func PluginRun(plugin *Plugin) {
 				log.Println("[INFO] timeout and kill process", fpath, "successfully")
 			}
 			value := model.MetricValue{
-				Metric:    "exec.fail",
+				Metric:    "plugin.fail",
 				Timestamp: time.Now().Unix(),
 				Value:     fmt.Sprintln(file.Basename(plugin.FilePath), " timeout error:", err),
 			}
 			metrics = append(metrics, &value)
 		} else if err != nil {
 			value := model.MetricValue{
-				Metric:    "exec.fail",
+				Metric:    "plugin.fail",
 				Timestamp: time.Now().Unix(),
 				Value:     fmt.Sprintln(file.Basename(plugin.FilePath), " error:", err),
 			}
 			metrics = append(metrics, &value)
 		} else {
 			// exec successfully
-			data := stdout.Bytes()
-			if len(data) == 0 {
-				if debug {
-					log.Println("debug stdout empty")
+			if stdout != nil {
+				data := stdout.Bytes()
+				if len(data) == 0 {
+					if debug {
+						log.Println("debug stdout empty")
+					}
+					value := model.MetricValue{
+						Metric:    "plugin.success",
+						Timestamp: time.Now().Unix(),
+						Value:     "stdout empty",
+					}
+					metrics = append(metrics, &value)
+				} else {
+					log.Println(string(data))
+					err = json.Unmarshal(data, &metrics)
+					if err != nil {
+						value := model.MetricValue{
+							Metric:    "plugin.success",
+							Timestamp: time.Now().Unix(),
+							Value:     string(data),
+						}
+						metrics = append(metrics, &value)
+					}
 				}
-				return
-			}
-			log.Println(string(data))
-			err = json.Unmarshal(data, &metrics)
-			if err != nil {
-				log.Print(err)
-				return
 			}
 		}
 		pkt := g.NewPkt()
@@ -136,6 +142,35 @@ func PluginRun(plugin *Plugin) {
 			log.Println(err)
 		}
 	}
+
+	if !file.IsExist(fpath) {
+		cmd.Callback(nil, nil, errors.New(fmt.Sprintf("%s 不存在", plugin.FilePath)), false)
+		return
+	}
+
+	go func() {
+		cmd.Run()
+	}()
+}
+
+//PluginExecute 插件的独立执行
+func PluginExecute(plugin *Plugin, fn func(stdout, stderr *bytes.Buffer, err error, isTimeout bool)) {
+	fpath := plugin.FilePath
+	if !file.IsExist(fpath) {
+		fn(nil, nil, fmt.Errorf("%s 不存在", plugin.FilePath), false)
+		return
+	}
+
+	debug := utils.GlobalConfig.GetBool("debug")
+	if debug {
+		log.Println(fpath, "running...")
+	}
+	cmd := g.Command{
+		Name:    fpath,
+		Args:    []string{},
+		Timeout: plugin.Interval,
+	}
+	cmd.Callback = fn
 	go func() {
 		cmd.Run()
 	}()

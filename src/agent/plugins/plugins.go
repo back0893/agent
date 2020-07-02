@@ -6,13 +6,13 @@ import (
 	"agent/src/g/model"
 	"bytes"
 	"fmt"
-	"github.com/back0893/goTcp/utils"
-	"github.com/toolkits/file"
 	"log"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
+
+	"github.com/back0893/goTcp/utils"
+	"github.com/toolkits/file"
 )
 
 type Plugin struct {
@@ -68,7 +68,7 @@ func deletePlugin(key string) {
 	delete(Plugins, key)
 }
 
-func Git(dir string, repPlugins *model.Plugins) {
+func Git(dir string, repPlugins *model.Plugins, logID int32) {
 	//没有插件的git地址,说明灭有配置插件
 	if len(repPlugins.Uri) == 0 {
 		ClearAllPlugins()
@@ -96,29 +96,24 @@ func Git(dir string, repPlugins *model.Plugins) {
 				Dir:     dir,
 			}
 		}
-		cmd.Callback = func(stdout, stderr bytes.Buffer, err error, isTimeout bool) {
-			value := model.MetricValue{
-				Metric:    "git",
-				Timestamp: time.Now().Unix(),
-				Value:     stdout.String(),
+		cmd.Callback = func(stdout, stderr *bytes.Buffer, err error, isTimeout bool) {
+			var status int8 = 0
+			var message string = ""
+			if stderr != nil && stderr.String() != "" {
+				message = string(stderr.Bytes())
+			} else if isTimeout {
+				// has be killed
+				message = "git 执行超时"
+			} else if err != nil {
+				message = err.Error()
+			} else {
+				// exec successfully
+				status = 1
+				message = string(stdout.Bytes())
 			}
-			if isTimeout {
-				value.Value = fmt.Sprintln("[ERROR] git timeout error:", err)
-			}
-			if err != nil {
-				//如果异常退出,错误输出才有用,,
-				//因为其他命令也可能使用错误输出
-				errStr := stderr.String()
-				if errStr != "" {
-					value.Value = fmt.Sprintln("[ERROR] git update fail error:", errStr)
-				}
-			}
-			//回应git更新成功,应该为日志
-			//每执行一个操作后,应该将操作的成功或者失败的信息通知中控服务器
+			pkt := g.ComResponse(logID, status, message)
+
 			a := utils.GlobalConfig.Get(g.AGENT).(iface.IAgent)
-			pkt := g.NewPkt()
-			pkt.Id = g.ActionNotice
-			pkt.Data, _ = g.EncodeData([]*model.MetricValue{&value})
 			if err := a.GetCon().Write(pkt); err != nil {
 				log.Println(err)
 			}

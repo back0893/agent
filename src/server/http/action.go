@@ -15,11 +15,11 @@ import (
 	"github.com/back0893/goTcp/iface"
 )
 
-type action struct {
+type Action struct {
 	Code    string `json:"code"`
 	ID      string `json:"id"`
 	Command string `json:"command"`
-	LogID   int    `json:"logId"`
+	LogID   int32  `json:"logId"`
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +31,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("!错误!"))
 		return
 	}
-	info := action{}
+	info := Action{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&info); err != nil {
 		w.Write([]byte("!解析json错误!"))
@@ -52,14 +52,14 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		pkt.Data, _ = g.EncodeData(data)
 	case "0004":
 		pkt.Id = g.PortListenList
-		data := make([]int64, 0)
+		data := make([]int32, 0)
 		portStr := strings.Split(info.Command, ",")
 
 		for _, p := range portStr {
 			if port, err := strconv.Atoi(p); err != nil {
 				continue
 			} else {
-				data = append(data, int64(port))
+				data = append(data, int32(port))
 			}
 		}
 
@@ -78,6 +78,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			Type: 2,
 		}
 		pkt.Data, _ = g.EncodeData(data)
+	case "0007":
+		pkt.Id = g.Execute
+		data := model.Execute{
+			File:    info.Command,
+			TimeOut: 10 * 1000,
+		}
+		pkt.Data, _ = g.EncodeData(data)
 	default:
 		w.Write([]byte("未知执行,请确认"))
 		return
@@ -88,6 +95,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		io.WriteString(w, fmt.Sprintf("%s不存在或者没有上线", info.ID))
 		return
 	}
+	//新增logId
+	logID, err := g.EncodeData(info.LogID)
+	if err != nil {
+		w.Write([]byte("非法logId"))
+		return
+	}
+	pkt.Data = append(pkt.Data, logID...)
 	if err := con.AsyncWrite(pkt, time.Second*2); err != nil {
 		io.WriteString(w, "发送至agent超时")
 		return

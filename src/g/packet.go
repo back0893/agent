@@ -58,10 +58,10 @@ func (pkt *Packet) Serialize() ([]byte, error) {
 /**
 常用回应
 */
-func ComResponse(id int32) iface.IPacket {
+func ComResponse(id int32, status int8, message string) *Packet {
 	pkt := NewPkt()
 	pkt.Id = Response
-	com := model.Common{ID: id}
+	com := model.Common{ID: id, Status: status, Message: message}
 	pkt.Data, _ = EncodeData(com)
 	return pkt
 }

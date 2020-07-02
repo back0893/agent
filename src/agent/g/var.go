@@ -1,6 +1,7 @@
 package g
 
 import (
+	"agent/src/g"
 	"encoding/json"
 	"log"
 	"os"
@@ -16,6 +17,7 @@ func SetPortListen(ports []int64) {
 	porstListenLock.RLock()
 	defer porstListenLock.RUnlock()
 	portsListen = append(portsListen, ports...)
+	portsListen = g.UniqueInt64(portsListen)
 }
 func GetPortListen() []int64 {
 	porstListenLock.Lock()

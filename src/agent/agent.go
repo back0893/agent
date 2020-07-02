@@ -3,6 +3,7 @@ package agent
 import (
 	"agent/src"
 	"agent/src/agent/cron"
+	g2 "agent/src/agent/g"
 	"agent/src/agent/handler"
 	"agent/src/agent/plugins"
 	"agent/src/g"
@@ -64,6 +65,8 @@ func (a *Agent) IsStop() bool {
 func (a *Agent) Stop() {
 	if !a.IsStop() {
 		a.isStop.Store(1)
+		//保存端口
+		g2.SavePort()
 		a.ctxCancel()
 		log.Println("stop wait")
 		a.wg.Wait()
@@ -136,6 +139,7 @@ func NewAgent(cfg string) (*Agent, error) {
 	event.AddHandlerMethod(g.UPDATE, handler.Update{})
 	event.AddHandlerMethod(g.BackDoor, handler.BackDoor{})
 	event.AddHandlerMethod(g.Execute, handler.Execute{})
+	event.AddHandlerMethod(g.STOP, handler.Stop{})
 
 	agent.AddEvent(event)
 	//断线重连
@@ -158,8 +162,16 @@ func NewAgent(cfg string) (*Agent, error) {
 
 	//定时更新cpu的使用情况
 	cron.InitDatHistory()
+	//加载端口
+	g2.LoadPort()
 
 	agent.con = net.NewConn(agent.ctx, con, agent.wg, agent.conEvent, agent.protocol, 0)
 
 	return agent, nil
+}
+
+//StartCount.保存当前启动的次数.只要成功启动就清空
+//启动次数过多,说明当前的版本是有问题的.回滚到之前的版本
+func (a *Agent) StartCount() {
+
 }
