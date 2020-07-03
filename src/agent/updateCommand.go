@@ -21,6 +21,11 @@ func init() {
 func GetUpdateChan() chan *model.UpdateInfo {
 	return updateChan
 }
+func Undo() {
+	filename := fmt.Sprintf("%s/agent", utils.GlobalConfig.GetString("root"))
+	agent := NewUpdate(filename)
+	agent.Undo()
+}
 
 /**
 更新,需要有撤销动作当执行失败时..

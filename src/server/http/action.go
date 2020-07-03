@@ -3,6 +3,7 @@ package http
 import (
 	"agent/src/g"
 	"agent/src/g/model"
+	"agent/src/server/db"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -51,6 +52,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		pkt.Data, _ = g.EncodeData(data)
 	case "0004":
+		//监听端口
 		pkt.Id = g.PortListenList
 		data := make([]int32, 0)
 		portStr := strings.Split(info.Command, ",")
@@ -65,6 +67,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 		pkt.Data, _ = g.EncodeData(data)
 	case "0005":
+		//更新agent
 		pkt.Id = g.UPDATE
 		data := model.UpdateInfo{
 			URL:  info.Command,
@@ -72,6 +75,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		pkt.Data, _ = g.EncodeData(data)
 	case "0006":
+		//更新配置
 		pkt.Id = g.UPDATE
 		data := model.UpdateInfo{
 			URL:  info.Command,
@@ -79,6 +83,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 		pkt.Data, _ = g.EncodeData(data)
 	case "0007":
+		//执行一个脚本
 		pkt.Id = g.Execute
 		data := model.Execute{
 			File:    info.Command,
@@ -92,6 +97,11 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	con, ok := g.GetCon(server, info.ID)
 	if ok == false {
+		ep, ok := db.DbConnections.Get("ep")
+		if !ok {
+			io.WriteString(w, "数据库连接失败!")
+		}
+		ep.Exec("update cc_service_log set status=?,log=? where id=?", 3, "不存在或者没有上线", info.LogID)
 		io.WriteString(w, fmt.Sprintf("%s不存在或者没有上线", info.ID))
 		return
 	}
@@ -102,8 +112,13 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	pkt.Data = append(pkt.Data, logID...)
-	if err := con.AsyncWrite(pkt, time.Second*2); err != nil {
-		io.WriteString(w, "发送至agent超时")
+	if err := con.AsyncWrite(pkt, time.Second*5); err != nil {
+		ep, ok := db.DbConnections.Get("ep")
+		if !ok {
+			io.WriteString(w, "数据库连接失败!")
+		}
+		ep.Exec("update cc_service_log set status=?,log=? where id=?", 3, "发送超时", info.LogID)
+		io.WriteString(w, "发送超时")
 		return
 	}
 	//todo 连接到tcp发送消息

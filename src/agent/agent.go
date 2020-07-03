@@ -8,6 +8,7 @@ import (
 	"agent/src/agent/plugins"
 	"agent/src/g"
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -19,6 +20,7 @@ import (
 	"github.com/back0893/goTcp/iface"
 	"github.com/back0893/goTcp/net"
 	"github.com/back0893/goTcp/utils"
+	"github.com/toolkits/file"
 )
 
 type Agent struct {
@@ -65,6 +67,7 @@ func (a *Agent) IsStop() bool {
 func (a *Agent) Stop() {
 	if !a.IsStop() {
 		a.isStop.Store(1)
+		os.Remove("./.startCount")
 		//保存端口
 		g2.SavePort()
 		a.ctxCancel()
@@ -123,6 +126,11 @@ func NewAgent(cfg string) (*Agent, error) {
 		wg:       &sync.WaitGroup{},
 		cfg:      cfg,
 	}
+	if agent.StartCount() {
+		Undo()
+		agent.Stop()
+		return nil, errors.New("失败启动次数过多,回退")
+	}
 	ctx := context.WithValue(context.WithValue(context.Background(), g.AGENT, agent), "upgradeChan", GetUpdateChan())
 
 	//等待通知更新
@@ -170,8 +178,32 @@ func NewAgent(cfg string) (*Agent, error) {
 	return agent, nil
 }
 
-//StartCount.保存当前启动的次数.只要成功启动就清空
-//启动次数过多,说明当前的版本是有问题的.回滚到之前的版本
-func (a *Agent) StartCount() {
-
+//StartCount.保存当前启动的次数.只要成功启动就清空. 启动次数过多,说明当前的版本是有问题的.回滚到之前的版本
+func (a *Agent) StartCount() bool {
+	var fp *os.File
+	var err error
+	if file.IsExist("./.startCount") {
+		fp, err = os.Open("./.startCount")
+	} else {
+		fp, err = os.Create("./.startCount")
+	}
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	defer fp.Close()
+	first := make([]byte, 1)
+	n, _ := fp.Read(first)
+	if n == 0 {
+		first[0] = 1
+	} else {
+		first[0]++
+	}
+	if first[0] > 3 {
+		//说明已经反复启动数次
+		first[0] = 0
+		return true
+	}
+	fp.Write(first)
+	return false
 }
