@@ -118,6 +118,7 @@ func Upgrade(info *model.UpdateInfo) {
 	data := model.UpdateResponse{LogID: info.LogID}
 	if success {
 		data.Status = true
+		data.Message = "更新成功"
 	} else {
 		data.Message = err.Error()
 	}

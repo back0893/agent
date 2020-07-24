@@ -28,9 +28,9 @@ func (p ResponseHandler) Handler(ctx context.Context, packet *g.Packet, connecti
 		log.Println("db连接失败")
 		return
 	}
-	status := 1
-	if info.Status == 0 {
-		status = 2
+	status := 2
+	if info.Status > 0 {
+		status = 1
 	}
 	if _, err := ep.Exec("update cc_service_log set status=?,log=? where id=?", status, strings.Trim(info.Message, "\n\r"), info.ID); err != nil {
 		log.Println(err.Error())

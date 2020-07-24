@@ -23,9 +23,9 @@ func (u UpdateHandler) Handler(ctx context.Context, packet *g.Packet, connection
 	if !ok {
 		return
 	}
-	status := 1
+	status := 2
 	if info.Status {
-		status = 2
+		status = 1
 	}
 	if _, err := ep.Exec("update cc_service_log set status=?,log=? where id=?", status, strings.Trim(info.Message, "\n\r"), info.LogID); err != nil {
 		log.Println(err.Error())
