@@ -6,7 +6,6 @@ import (
 	"agent/src/server/db"
 	"context"
 	"log"
-	"strings"
 
 	"github.com/back0893/goTcp/iface"
 )
@@ -40,11 +39,8 @@ func (a ActionNotice) Handler(ctx context.Context, packet *g.Packet, connection 
 	}
 	for _, metric := range metrics {
 		log.Println(metric.Metric, metric.Value)
-		if strings.Index(metric.Metric, "plugin") == 0 {
-			if _, err := ep.Exec("insert into cc_server_log set server_id=?,created_at=?,tag=?,content=?", auth.Id, g.CSTTime(), metric.Metric, metric.Value); err != nil {
-				log.Println(err.Error())
-			}
-		}
+		if _, err := ep.Exec("insert into cc_server_log set server_id=?,created_at=?,tag=?,content=?", auth.Id, g.CSTTime(), metric.Metric, metric.Value); err != nil {
+			log.Println(err.Error())
 	}
 
 }

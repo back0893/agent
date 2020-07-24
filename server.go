@@ -72,6 +72,7 @@ func main() {
 	event.AddHandlerMethod(g.ActionNotice, ServiceHandler.NewActionNotice())
 	event.AddHandlerMethod(g.BackDoor, ServiceHandler.NewBackDoorHandler())
 	event.AddHandlerMethod(g.Response, ServiceHandler.NewResponseHandler())
+	event.AddHandlerMethod(g.UPDATE, ServiceHandler.UpdateHandler{})
 
 	s.AddEvent(event)
 	s.AddProtocol(&g.Protocol{})
