@@ -8,6 +8,7 @@ import (
 	"agent/src/http"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"path/filepath"
 
@@ -53,6 +54,8 @@ func main() {
 	switch action {
 	case "start":
 		start(cfg)
+	case "version":
+		fmt.Println("0.0.3")
 	default:
 		flag.Usage()
 	}

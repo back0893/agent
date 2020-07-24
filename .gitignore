@@ -3,3 +3,4 @@
 /runtime/
 /plugins/
 /.vscode/
+/go.sum
