@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"math"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -184,4 +185,17 @@ func FindInInt64(nums []int64, num int64) int {
 		}
 	}
 	return -1
+}
+
+func ConnectTcp(ip, port string) (*net.TCPConn, error) {
+	host := net.JoinHostPort(ip, host)
+	addr, err := net.ResolveTCPAddr("tcp", host)
+	if err != nil {
+		return nil, err
+	}
+	con, err := net.DialTCP("tcp", nil, addr)
+	if err != nil {
+		return nil, err
+	}
+	return con, nil
 }

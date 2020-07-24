@@ -1,7 +1,7 @@
 {
   "ip": "127.0.0.1",
   "port": 8001,
-  "username": "1",
+  "username": "32",
   "password": "123456",
   "heartBeat": 3,
   "debug": true,
@@ -11,5 +11,6 @@
   "http": {
     "enabled": true,
     "listen": ":8002"
-  }
+  },
+  "version":444
 }

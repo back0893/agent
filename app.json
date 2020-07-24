@@ -7,11 +7,11 @@
     "listen": ":9132"
   },
   "db": {
-    "username": "root",
-    "password": "123456",
+    "username": "epuser",
+    "password": "epuser@123-New",
     "net": "tcp",
-    "addr": "192.168.101.215:3306",
-    "dbname": "test",
+    "addr": "106.75.138.97:3306",
+    "dbname": "ep",
     "ParseTime": true,
     "params": {
       "charset": "utf8"
@@ -21,5 +21,7 @@
     "start": true,
     "size": 10,
     "buffer": 100
-  }
+  },
+  "PacketSendChanLimit":10,
+  "packetReceiveChan":10
 }
