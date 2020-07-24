@@ -109,7 +109,7 @@ func Git(dir string, repPlugins *model.Plugins, logID int32) {
 			} else {
 				// exec successfully
 				status = 1
-				message = string(stdout.Bytes())
+				message = string("更新成功")
 			}
 			pkt := g.ComResponse(logID, status, message)
 

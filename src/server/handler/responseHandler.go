@@ -6,6 +6,7 @@ import (
 	"agent/src/server/db"
 	"context"
 	"log"
+	"strings"
 
 	"github.com/back0893/goTcp/iface"
 )
@@ -31,7 +32,7 @@ func (p ResponseHandler) Handler(ctx context.Context, packet *g.Packet, connecti
 	if info.Status == 0 {
 		status = 2
 	}
-	if _, err := ep.Exec("update cc_service_log set status=?,log=? where id=?", status, info.Message, info.ID); err != nil {
+	if _, err := ep.Exec("update cc_service_log set status=?,log=? where id=?", status, strings.Trim(info.Message, "\n\r"), info.ID); err != nil {
 		log.Println(err.Error())
 		return
 	}
