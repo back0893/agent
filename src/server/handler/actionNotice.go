@@ -41,6 +41,6 @@ func (a ActionNotice) Handler(ctx context.Context, packet *g.Packet, connection 
 		log.Println(metric.Metric, metric.Value)
 		if _, err := ep.Exec("insert into cc_server_log set server_id=?,created_at=?,tag=?,content=?", auth.Id, g.CSTTime(), metric.Metric, metric.Value); err != nil {
 			log.Println(err.Error())
+		}
 	}
-
 }
